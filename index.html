@@ -165,11 +165,12 @@
         // --- CITY LAYOUT DEFINITION ---
         const cityLayout = [
             { id: 0, pos: new THREE.Vector3(0, 0, 0), theme: createNoodleShop, title: "Noodle Shop", desc: "A cozy noodle shop. The steam warms the cold metal walls.", connections: { north: 1 } },
-            { id: 1, pos: new THREE.Vector3(0, 0, -12), theme: createLivingQuarters, title: "Living Quarters", desc: "A cramped but functional living space.", connections: { south: 0, east: 2, up: 3 } },
-            { id: 2, pos: new THREE.Vector3(10, 0, -12), theme: createArcade, title: "Mini Arcade", desc: "A noisy, flashing escape from the quiet hum of the city.", connections: { west: 1 } },
-            { id: 3, pos: new THREE.Vector3(0, 5, -12), theme: createHydroponics, title: "Hydroponics Bay", desc: "The source of fresh greens, glowing under purple lights.", connections: { down: 1, north: 4 } },
-            { id: 4, pos: new THREE.Vector3(0, 5, -24), theme: null, title: "Empty Container", desc: "This container is cold and empty. A faint breeze comes from an opening above.", connections: { south: 3, up: 5 } },
-            { id: 5, pos: new THREE.Vector3(0, 10, -24), theme: createLookout, title: "Lookout Point", desc: "A vantage point overlooking the foggy, sprawling container city below.", connections: { down: 4 } },
+            { id: 1, pos: new THREE.Vector3(0, 0, -12), theme: createLivingQuarters, title: "Living Quarters", desc: "A cramped but functional living space.", connections: { south: 0, up: 2 } },
+            { id: 2, pos: new THREE.Vector3(0, 5, -12), theme: createArcade, title: "Mini Arcade", desc: "A noisy, flashing escape from the quiet hum of the city.", connections: { down: 1, west: 3, east: 4 } },
+            { id: 3, pos: new THREE.Vector3(-10, 5, -12), theme: createCafe, title: "Container Cafe", desc: "The aroma of coffee lingers in the air. A place to relax and recharge.", connections: { east: 2 } },
+            { id: 4, pos: new THREE.Vector3(10, 5, -12), theme: createHydroponics, title: "Hydroponics Bay", desc: "The source of fresh greens, glowing under purple lights.", connections: { west: 2, north: 5 } },
+            { id: 5, pos: new THREE.Vector3(10, 5, -24), theme: createStorage, title: "Storage Room", desc: "A disorganized pile of old stuff and forgotten crates.", connections: { south: 4, up: 6 } },
+            { id: 6, pos: new THREE.Vector3(10, 10, -24), theme: createLookout, title: "Lookout Point", desc: "A vantage point overlooking the foggy, sprawling container city below.", connections: { down: 5 } },
         ];
 
         // --- ASSET LOADING HELPER ---
@@ -258,6 +259,8 @@
         }
 
         // --- THEME FUNCTIONS (Populate containers) ---
+
+        // Noodle Shop: Added more food items
         function createNoodleShop(w, h, d) {
             const group = new THREE.Group();
             const counterGeo = new THREE.BoxGeometry(w * 0.8, 1.2, 1);
@@ -269,18 +272,28 @@
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(-1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
 
+            // Added food items
+            loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(-1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/chopstick.glb', new THREE.Vector3(-1.5, 1.2, 0.8), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, Math.PI, Math.PI / 2));
+            loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/chopstick.glb', new THREE.Vector3(1.5, 1.2, 0.8), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, Math.PI, Math.PI / 2));
+
             const light = new THREE.PointLight(0xffa500, 50, 8);
             light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
         }
 
+        // Living Quarters: Added more details
         function createLivingQuarters(w, h, d) {
             const group = new THREE.Group();
 
             loadAsset(group, 'assets/cyberpunk/sofa_couch.glb', new THREE.Vector3(-w / 2 + 2, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/tableCoffee.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/televisionModern.glb', new THREE.Vector3(w / 2 - 1, 0.8, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/books.glb', new THREE.Vector3(w / 2 - 1, 1.4, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
 
             const light = new THREE.PointLight(0xeeeeff, 25, 12);
             light.position.set(0, h - 1, 0);
@@ -289,19 +302,39 @@
             return group;
         }
 
+        // New Cafe Theme
+        function createCafe(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/tableRound.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(0, 0, -2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(0, 0, 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/food/cup-coffee.glb', new THREE.Vector3(0, 0.7, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/donut-chocolate.glb', new THREE.Vector3(0, 0.7, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, 0, 0));
+
+            const counterGeo = new THREE.BoxGeometry(w * 0.8, 1.2, 1.5);
+            const counterMat = new THREE.MeshStandardMaterial({ color: 0x964B00 });
+            const counter = new THREE.Mesh(counterGeo, counterMat);
+            counter.position.set(0, 0.6, -d / 2 + 1);
+            group.add(counter);
+
+            loadAsset(group, 'assets/food/cup-coffee.glb', new THREE.Vector3(0, 1.2, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xffddaa, 30, 10);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
+
+            return group;
+        }
+
+        // Arcade: Replaced with actual models
         function createArcade(w, h, d) {
             const group = new THREE.Group();
-            const arcadeGeo = new THREE.BoxGeometry(1, 1.8, 1.2);
-            const arcadeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
-            const arcade1 = new THREE.Mesh(arcadeGeo, arcadeMat);
-            arcade1.position.set(w / 2 - 1.5, 0.9, -2);
-            group.add(arcade1);
 
-            const screenGeo = new THREE.PlaneGeometry(0.8, 0.6);
-            const screenMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-            const screen1 = new THREE.Mesh(screenGeo, screenMat);
-            screen1.position.set(w / 2 - 1.5, 1.2, -2 + 0.61);
-            group.add(screen1);
+            // Use arcade models from the assets folder
+            loadAsset(group, 'assets/arcade/pinball.glb', new THREE.Vector3(-w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/arcade/arcade-machine.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/arcade/claw-machine.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/arcade/prizes.glb', new THREE.Vector3(w / 2 - 1, 0.8, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
 
             const light = new THREE.PointLight(0x00ffff, 40, 10);
             light.position.set(0, h / 2, 0);
@@ -309,24 +342,43 @@
             return group;
         }
 
+        // Hydroponics: Using potted plants
         function createHydroponics(w, h, d) {
             const group = new THREE.Group();
-            const planterGeo = new THREE.BoxGeometry(w * 0.8, 0.5, 1);
-            const planterMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+
             for (let i = 0; i < 4; i++) {
-                const planter = new THREE.Mesh(planterGeo, planterMat);
-                planter.position.set(0, 0.25, -d / 2 + 1 + i * 2);
-                group.add(planter);
+                loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(0, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             }
+
             const light = new THREE.PointLight(0xff00ff, 80, 12);
             light.position.set(0, h - 0.5, 0);
             group.add(light);
             return group;
         }
 
+        // New Storage Room Theme
+        function createStorage(w, h, d) {
+            const group = new THREE.Group();
+
+            loadAsset(group, 'assets/urban/pallet.glb', new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/pallet.glb', new THREE.Vector3(1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(-1.5, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/cardboardBoxClosed.glb', new THREE.Vector3(1.5, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/trashcan.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xaaaaaa, 20, 15);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
+            return group;
+        }
+
+        // Lookout Point: Added more detail
         function createLookout(w, h, d) {
             const group = new THREE.Group();
             loadAsset(group, 'assets/urban/detail-barrier-strong-type-a.glb', new THREE.Vector3(0, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/detail-bench.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/urban/detail-light-single.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+
             const light = new THREE.PointLight(0x6677aa, 20, 15);
             light.position.set(0, h - 1, 0);
             group.add(light);
@@ -395,10 +447,10 @@
                 case 'arrowdown': case 's':
                     nextNodeId = currentNode.connections.south;
                     break;
-                case 'arrowleft':
+                case 'arrowleft': case 'a':
                     nextNodeId = currentNode.connections.west;
                     break;
-                case 'arrowright':
+                case 'arrowright': case 'd':
                     nextNodeId = currentNode.connections.east;
                     break;
                 case 'q':
