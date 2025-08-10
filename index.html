@@ -4,23 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Room Tour</title>
+    <title>Three.js Container City Explorer</title>
     <style>
         body {
             margin: 0;
-            background-color: #111;
+            background-color: #050510;
             color: white;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
         }
 
         canvas {
             display: block;
         }
 
-        #info-container {
+        #ui-container {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #info-container {
             padding: 15px;
             background: rgba(0, 0, 0, 0.6);
             border-radius: 8px;
@@ -31,11 +39,33 @@
             margin-top: 0;
         }
 
-        button {
+        #controls-info {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+        }
+
+        #nav-controls {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        #auto-mode-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        button {
             padding: 12px 24px;
             font-size: 16px;
             background-color: #4CAF50;
@@ -43,7 +73,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, opacity 0.3s;
         }
 
         button:hover {
@@ -53,455 +83,376 @@
         button:disabled {
             background-color: #555;
             cursor: not-allowed;
+            opacity: 0.7;
         }
     </style>
 </head>
 
 <body>
-    <div id="info-container">
-        <h2 id="scene-title">Welcome!</h2>
-        <p id="scene-description">Click the 'Next Scene' button to begin the tour of the rooms.</p>
+    <div id="ui-container">
+        <div id="info-container">
+            <h2 id="scene-title">Welcome!</h2>
+            <p id="scene-description">Use the arrow keys to explore the container city.</p>
+        </div>
+        <div id="controls-info">
+            <b>Controls:</b>
+            <p style="margin: 5px 0;">
+                <b>&uarr; / &darr; / &larr; / &rarr;</b> : Move between containers.<br>
+                <b>W / S</b> : Move Forward / Backward.
+            </p>
+        </div>
     </div>
-    <button id="next-btn">Next Scene</button>
+
+    <div id="nav-controls">
+        <label id="auto-mode-label">
+            <input type="checkbox" id="auto-mode-checkbox">
+            Auto Mode
+        </label>
+        <button id="next-btn">Next</button>
+    </div>
+
     <canvas id="c"></canvas>
+
     <script type="importmap">
-{
-    "imports": {
-        "three": "https://unpkg.com/three@0.167.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.167.0/examples/jsm/",
-        "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/",
+            "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
+        }
     }
-}
-</script>
+    </script>
+
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { gsap } from 'gsap';
 
-        // SCENE SETUP
+        // --- SCENE SETUP ---
         const canvas = document.querySelector('#c');
         const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2a);
-
-        // CAMERA
-        const fov = 75;
-        const aspect = window.innerWidth / window.innerHeight;
-        const near = 0.1;
-        const far = 100;
-        const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        camera.position.set(0, 2, 28); // Starting position
-
-        // LIGHTING
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 10, 7.5);
-        scene.add(directionalLight);
-
-        // ROOM/CORRIDOR DIMENSIONS
-        const roomWidth = 10;
-        const roomDepth = 12;
-        const roomHeight = 4;
-        const corridorLength = 8;
-        const wallThickness = 0.2;
-        const humanHeight = 1.7; // Camera height
-
-        // Reusable Materials
-        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
-        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
-
-        // --- HELPER FUNCTIONS TO BUILD THE WORLD ---
-
-        function createWall(w, h, d, position) {
-            const geometry = new THREE.BoxGeometry(w, h, d);
-            const wall = new THREE.Mesh(geometry, wallMaterial);
-            wall.position.copy(position);
-            return wall;
-        }
-
-        function createFloor(w, d, position) {
-            const geometry = new THREE.BoxGeometry(w, wallThickness, d);
-            const floor = new THREE.Mesh(geometry, floorMaterial);
-            floor.position.copy(position);
-            return floor;
-        }
-
-        function createDoorway(position, wallWidth, wallHeight) {
-            const doorWidth = 2;
-
-            const doorHeight = 3;
-            const group = new THREE.Group();
-
-            // Left part of the wall
-            const leftWidth = (wallWidth - doorWidth) / 2;
-            const leftWall = createWall(leftWidth, wallHeight, wallThickness, new THREE.Vector3(-doorWidth / 2 - leftWidth / 2, wallHeight / 2, 0));
-            group.add(leftWall);
-
-            // Right part of the wall
-            const rightWall = createWall(leftWidth, wallHeight, wallThickness, new THREE.Vector3(doorWidth / 2 + leftWidth / 2, wallHeight / 2, 0));
-            group.add(rightWall);
-
-            // Top part of the wall (lintel)
-            const topHeight = wallHeight - doorHeight;
-            const topWall = createWall(doorWidth, topHeight, wallThickness, new THREE.Vector3(0, doorHeight + topHeight / 2, 0));
-            group.add(topWall);
-
-            group.position.copy(position);
-            return group;
-        }
-
-        function createRoom(positionZ, themeFunction) {
-            const roomGroup = new THREE.Group();
-            roomGroup.position.z = positionZ;
-
-            // Floor
-            const floor = createFloor(roomWidth, roomDepth, new THREE.Vector3(0, 0, 0));
-            roomGroup.add(floor);
-
-            // Back Wall
-            const backWall = createWall(roomWidth, roomHeight, wallThickness, new THREE.Vector3(0, roomHeight / 2, -roomDepth / 2));
-            roomGroup.add(backWall);
-
-            // Left Wall
-            const leftWall = createWall(wallThickness, roomHeight, roomDepth, new THREE.Vector3(-roomWidth / 2, roomHeight / 2, 0));
-            roomGroup.add(leftWall);
-
-            // Right Wall
-            const rightWall = createWall(wallThickness, roomHeight, roomDepth, new THREE.Vector3(roomWidth / 2, roomHeight / 2, 0));
-            roomGroup.add(rightWall);
-
-            // Themed Content
-            if (themeFunction) {
-                const themedContent = themeFunction(roomWidth, roomHeight, roomDepth);
-                roomGroup.add(themedContent);
-            }
-
-            scene.add(roomGroup);
-        }
-
-        function createCorridor(positionZ, hasFrontDoor = true, hasBackDoor = true) {
-            const corridorGroup = new THREE.Group();
-            corridorGroup.position.z = positionZ;
-
-            // Corridor floor
-            const floor = createFloor(roomWidth, corridorLength, new THREE.Vector3(0, 0, 0));
-            corridorGroup.add(floor);
-
-            // Corridor walls
-            const leftWall = createWall(wallThickness, roomHeight, corridorLength, new THREE.Vector3(-roomWidth / 2, roomHeight / 2, 0));
-            corridorGroup.add(leftWall);
-            const rightWall = createWall(wallThickness, roomHeight, corridorLength, new THREE.Vector3(roomWidth / 2, roomHeight / 2, 0));
-            corridorGroup.add(rightWall);
-
-            // Doors
-            if (hasFrontDoor) {
-                const frontDoorWall = createDoorway(new THREE.Vector3(0, 0, corridorLength / 2), roomWidth, roomHeight);
-                corridorGroup.add(frontDoorWall);
-            }
-            if (hasBackDoor) {
-                const backDoorWall = createDoorway(new THREE.Vector3(0, 0, -corridorLength / 2), roomWidth, roomHeight);
-                corridorGroup.add(backDoorWall);
-            }
-
-            scene.add(corridorGroup);
-        }
-
-        // --- ROOM THEME FUNCTIONS ---
-
-        function createSolarpunkLivingRoom(w, h, d) {
-            const group = new THREE.Group();
-
-            // Bright floor (same as before)
-            const floor = new THREE.Mesh(new THREE.BoxGeometry(w, wallThickness, d), new THREE.MeshStandardMaterial({ color: 0x90ee90 }));
-            floor.position.y = wallThickness;
-            group.add(floor);
-
-            // "Plant" placeholders (same as before)
-            const plantGeo = new THREE.CylinderGeometry(0.5, 0.6, 1.2, 8);
-            const plantMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-            const planter1 = new THREE.Mesh(plantGeo, plantMat);
-            planter1.position.set(-w / 2 + 1, 0.6, -d / 2 + 1.5);
-            group.add(planter1);
-
-            const foliageGeo = new THREE.SphereGeometry(0.8, 8, 8);
-            const foliageMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
-            const foliage1 = new THREE.Mesh(foliageGeo, foliageMat);
-            foliage1.position.set(-w / 2 + 1, 1.8, -d / 2 + 1.5);
-            group.add(foliage1);
-
-            // --- NEW GLTF LOADER CODE ---
-            // 1. Instantiate the loader
-            const loader = new GLTFLoader();
-
-            // 2. Load the model
-            loader.load(
-                // Resource URL - replace this with your model's URL or local path (if using a server)
-                'http://127.0.0.1:8080/assets/sofa_couch.glb',
-
-                // onLoad callback: executed when the model has loaded
-                function (gltf) {
-                    const model = gltf.scene;
-
-                    // Position, scale, and rotate the model to fit the scene
-                    model.position.set(0, 0.2, d / 2 - 2); // Adjust position
-                    model.scale.set(1.5, 1.5, 1.5);      // Adjust scale
-                    model.rotation.y = Math.PI;         // Rotate 180 degrees
-
-                    // Add the loaded model to our room's group
-                    group.add(model);
-                },
-
-                // onProgress callback (optional)
-                function (xhr) {
-                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-                },
-
-                // onError callback (optional)
-                function (error) {
-                    console.error('An error happened while loading the model:', error);
-                    // As a fallback, you could add the placeholder box here
-                    const sofaGeo = new THREE.BoxGeometry(4, 1, 1.5);
-                    const sofaMat = new THREE.MeshStandardMaterial({ color: 0xF5F5DC });
-                    const sofa = new THREE.Mesh(sofaGeo, sofaMat);
-                    sofa.position.set(0, 0.5, d / 2 - 2);
-                    group.add(sofa);
-                }
-            );
-
-            // Bright light source (same as before)
-            const light = new THREE.PointLight(0xFFFFE0, 20, 15);
-            light.position.set(0, h - 1, 0);
-            group.add(light);
-
-            return group;
-        }
-
-        function createCyberpunkKitchen(w, h, d) {
-            const group = new THREE.Group();
-
-            const floor = new THREE.Mesh(new THREE.BoxGeometry(w, wallThickness, d), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.4 }));
-            floor.position.y = wallThickness;
-            group.add(floor);
-
-            // Neon light strips
-            const neonGeo = new THREE.BoxGeometry(w * 0.8, 0.1, 0.1);
-            const neonMatMagenta = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-            const neon1 = new THREE.Mesh(neonGeo, neonMatMagenta);
-            neon1.position.set(0, h - 0.5, -d / 2 + 0.5);
-            group.add(neon1);
-
-            const neonMatCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-            const neon2 = new THREE.Mesh(neonGeo, neonMatCyan);
-            neon2.position.set(0, 0.5, d / 2 - 0.5);
-            group.add(neon2);
-
-            // "Counter" placeholder
-            const counterGeo = new THREE.BoxGeometry(w, 1.2, 1.5);
-            const counterMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9, roughness: 0.2 });
-            const counter = new THREE.Mesh(counterGeo, counterMat);
-            counter.position.set(0, 0.6, -d / 2 + 1);
-            group.add(counter); // This is where you might load a kitchen_counter.gltf
-
-            // Neon point light
-            const light = new THREE.PointLight(0xff00ff, 50, 15);
-            light.position.set(w / 2 - 2, h / 2, 0);
-            group.add(light);
-
-            return group;
-        }
-
-        function createMinimalistBedroom(w, h, d) {
-            const group = new THREE.Group();
-
-            const floor = new THREE.Mesh(new THREE.BoxGeometry(w, wallThickness, d), new THREE.MeshStandardMaterial({ color: 0xe0e0e0 }));
-            floor.position.y = wallThickness;
-            group.add(floor);
-
-            // "Bed" placeholder
-            const bedGeo = new THREE.BoxGeometry(2.5, 0.5, 3.5);
-            const bedMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const bed = new THREE.Mesh(bedGeo, bedMat);
-            bed.position.set(w / 2 - 2, 0.25, 0);
-            group.add(bed); // This is where you might load a bed.gltf
-
-            // "Dresser" placeholder
-            const dresserGeo = new THREE.BoxGeometry(2, 1.5, 1);
-            const dresserMat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb });
-            const dresser = new THREE.Mesh(dresserGeo, dresserMat);
-            dresser.position.set(-w / 2 + 1.5, 0.75, 0);
-            group.add(dresser);
-
-            // Soft Light
-            const light = new THREE.PointLight(0xffffff, 10, 20);
-            light.position.set(0, h - 1, 0);
-            group.add(light);
-
-            return group;
-        }
-
-        function createArcadeShop(w, h, d) {
-            const group = new THREE.Group();
-
-            const floor = new THREE.Mesh(new THREE.BoxGeometry(w, wallThickness, d), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-            floor.position.y = wallThickness;
-            group.add(floor);
-
-            // "Arcade Machine" placeholder
-            function createArcade(x, z, color) {
-                const arcadeGroup = new THREE.Group();
-                const bodyGeo = new THREE.BoxGeometry(1, 1.8, 1.2);
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                body.position.set(x, 0.9, z);
-
-                const screenGeo = new THREE.PlaneGeometry(0.8, 0.6);
-                const screenMat = new THREE.MeshBasicMaterial({ color: color });
-                const screen = new THREE.Mesh(screenGeo, screenMat);
-                screen.position.set(x, 1.2, z + 0.61);
-
-                arcadeGroup.add(body, screen);
-                return arcadeGroup; // This is where you might load arcade_machine.gltf
-            }
-
-            group.add(createArcade(-w / 2 + 1, -d / 2 + 2, 0x00ff00));
-            group.add(createArcade(-w / 2 + 1, 0, 0xff00ff));
-            group.add(createArcade(-w / 2 + 1, d / 2 - 2, 0xffff00));
-
-            // Neon Sign placeholder
-            const signGeo = new THREE.SphereGeometry(0.5, 16, 16);
-            const signMat = new THREE.MeshBasicMaterial({ color: 0xff4500 });
-            const sign = new THREE.Mesh(signGeo, signMat);
-            sign.position.set(w / 2 - 1, h - 1, 0);
-            group.add(sign);
-            const light = new THREE.PointLight(0xff4500, 40, 15);
-            light.position.copy(sign.position);
-            group.add(light);
-
-            return group;
-        }
-
-
-        // --- BUILD THE WORLD LAYOUT ---
-        // Z positions are calculated based on room/corridor sizes
-        const startZ = 24;
-        let currentZ = startZ; // Start in the first corridor
-
-        // Corridor 1
-        currentZ -= corridorLength / 2;
-        createCorridor(currentZ, true, false); // Entrance corridor has one door
-        currentZ -= corridorLength / 2;
-
-        // Room 1: Solarpunk Living Room
-        currentZ -= roomDepth / 2;
-        const room1Z = currentZ;
-        createRoom(room1Z, createSolarpunkLivingRoom);
-        currentZ -= roomDepth / 2;
-
-        // Corridor 2
-        currentZ -= corridorLength / 2;
-        createCorridor(currentZ);
-        currentZ -= corridorLength / 2;
-
-        // Room 2: Cyberpunk Kitchen
-        currentZ -= roomDepth / 2;
-        const room2Z = currentZ;
-        createRoom(room2Z, createCyberpunkKitchen);
-        currentZ -= roomDepth / 2;
-
-        // Corridor 3
-        currentZ -= corridorLength / 2;
-        createCorridor(currentZ);
-        currentZ -= corridorLength / 2;
-
-        // Room 3: Minimalist Bedroom
-        currentZ -= roomDepth / 2;
-        const room3Z = currentZ;
-        createRoom(room3Z, createMinimalistBedroom);
-        currentZ -= roomDepth / 2;
-
-        // Corridor 4
-        currentZ -= corridorLength / 2;
-        createCorridor(currentZ);
-        currentZ -= corridorLength / 2;
-
-        // Room 4: Arcade Shop
-        currentZ -= roomDepth / 2;
-        const room4Z = currentZ;
-        createRoom(room4Z, createArcadeShop);
-        currentZ -= roomDepth / 2;
-
-
-        // --- CAMERA ANIMATION PATH ---
-        const lookAtTarget = new THREE.Vector3(0, humanHeight, 0); // An object for the camera to look at
+        scene.background = new THREE.Color(0x050510);
+        scene.fog = new THREE.Fog(0x050510, 20, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        const lookAtTarget = new THREE.Vector3(0, 0, 0);
+        camera.position.set(0, 2, 10);
         camera.lookAt(lookAtTarget);
 
-        const cameraPath = [
-            { pos: new THREE.Vector3(0, humanHeight, startZ), lookAt: new THREE.Vector3(0, humanHeight, 0), title: "Corridor", desc: "Welcome to this procedural house. We are in the entrance corridor." },
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(10, 20, 15);
+        scene.add(directionalLight);
 
-            { pos: new THREE.Vector3(-2.5, humanHeight, room1Z + 2), lookAt: new THREE.Vector3(0, humanHeight, room1Z - 5), title: "Solarpunk Living Room", desc: "A bright, nature-inspired living space. Placeholders represent plants and furniture." },
-            { pos: new THREE.Vector3(0, humanHeight, room1Z - corridorLength), lookAt: new THREE.Vector3(0, humanHeight, room1Z - corridorLength - 5), title: "Corridor", desc: "Moving to the next section." },
-            { pos: new THREE.Vector3(2.5, humanHeight, room2Z + 2), lookAt: new THREE.Vector3(0, humanHeight, room2Z - 5), title: "Cyberpunk Kitchen", desc: "A dark kitchen with high-contrast neon lights. Materials have high metalness." },
-            { pos: new THREE.Vector3(0, humanHeight, room2Z - corridorLength), lookAt: new THREE.Vector3(0, humanHeight, room2Z - corridorLength - 5), title: "Corridor", desc: "On our way to the bedroom." },
-            { pos: new THREE.Vector3(0, humanHeight, room3Z + 4), lookAt: new THREE.Vector3(0, humanHeight, room3Z - 4), title: "Minimalist Bedroom", desc: "A clean, simple room with neutral colors and soft lighting." },
-            { pos: new THREE.Vector3(0, humanHeight, room3Z - corridorLength), lookAt: new THREE.Vector3(0, humanHeight, room3Z - corridorLength - 5), title: "Corridor", desc: "Last stop: the arcade!" },
-            { pos: new THREE.Vector3(2, humanHeight, room4Z + 2), lookAt: new THREE.Vector3(-3.5, 1.2, room4Z - 2), title: "Retro Arcade Shop", desc: "A fun room with placeholder arcade machines using emissive materials for their screens." },
-        ];
+        // --- CORE VARIABLES ---
+        const containerSize = new THREE.Vector3(8, 4, 10);
+        const wallThickness = 0.2;
+        const humanHeight = 1.7;
+        let currentNodeIndex = 0;
+        let isAnimating = false;
+        let isAutoMode = false;
 
-        let currentSceneIndex = 0;
+        // --- UI ELEMENTS ---
         const nextBtn = document.getElementById('next-btn');
+        const autoModeCheckbox = document.getElementById('auto-mode-checkbox');
         const titleEl = document.getElementById('scene-title');
         const descEl = document.getElementById('scene-description');
 
-        function moveCamera() {
+        // --- CITY LAYOUT DEFINITION ---
+        // This is the "map" of our city. Each object is a container node.
+        // Connections link nodes by their ID.
+        const cityLayout = [
+            { id: 0, pos: new THREE.Vector3(0, 0, 0), theme: createNoodleShop, title: "Noodle Shop", desc: "A cozy noodle shop. The steam warms the cold metal walls.", connections: { north: 1 } },
+            { id: 1, pos: new THREE.Vector3(0, 0, -12), theme: createLivingQuarters, title: "Living Quarters", desc: "A cramped but functional living space.", connections: { south: 0, east: 2, up: 3 } },
+            { id: 2, pos: new THREE.Vector3(10, 0, -12), theme: createArcade, title: "Mini Arcade", desc: "A noisy, flashing escape from the quiet hum of the city.", connections: { west: 1 } },
+            { id: 3, pos: new THREE.Vector3(0, 5, -12), theme: createHydroponics, title: "Hydroponics Bay", desc: "The source of fresh greens, glowing under purple lights.", connections: { down: 1, north: 4 } },
+            { id: 4, pos: new THREE.Vector3(0, 5, -24), theme: null, title: "Empty Container", desc: "This container is cold and empty. A faint breeze comes from an opening above.", connections: { south: 3, up: 5 } },
+            { id: 5, pos: new THREE.Vector3(0, 10, -24), theme: createLookout, title: "Lookout Point", desc: "A vantage point overlooking the foggy, sprawling container city below.", connections: { down: 4 } },
+        ];
+
+        // --- CONTAINER CREATION LOGIC ---
+        function createContainer(node) {
+            const group = new THREE.Group();
+            group.position.copy(node.pos);
+
+            const containerMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8, roughness: 0.5 });
+
+            const doorSize = { width: 2, height: 3 };
+
+            // Helper to create a wall with a potential opening
+            const createWall = (size, position, rotation, connection) => {
+                if (connection !== undefined && connection !== null) {
+                    // Wall with doorway
+                    const wallGroup = new THREE.Group();
+                    const wallW = size.x > size.z ? size.x : size.z;
+                    const sideWidth = (wallW - doorSize.width) / 2;
+
+                    // Left part
+                    const leftGeo = new THREE.BoxGeometry(sideWidth, size.y, wallThickness);
+                    const leftMesh = new THREE.Mesh(leftGeo, containerMat);
+                    leftMesh.position.x = -(doorSize.width / 2 + sideWidth / 2);
+                    wallGroup.add(leftMesh);
+
+                    // Right part
+                    const rightGeo = new THREE.BoxGeometry(sideWidth, size.y, wallThickness);
+                    const rightMesh = new THREE.Mesh(rightGeo, containerMat);
+                    rightMesh.position.x = (doorSize.width / 2 + sideWidth / 2);
+                    wallGroup.add(rightMesh);
+
+                    // Top part
+                    const topHeight = size.y - doorSize.height;
+                    if (topHeight > 0) {
+                        const topGeo = new THREE.BoxGeometry(doorSize.width, topHeight, wallThickness);
+                        const topMesh = new THREE.Mesh(topGeo, containerMat);
+                        topMesh.position.y = doorSize.height / 2 + topHeight / 2;
+                        wallGroup.add(topMesh);
+                    }
+                    wallGroup.position.copy(position);
+                    wallGroup.rotation.y = rotation;
+                    return wallGroup;
+                } else {
+                    // Solid wall
+                    const wallGeo = new THREE.BoxGeometry(size.x, size.y, size.z);
+                    const wallMesh = new THREE.Mesh(wallGeo, containerMat);
+                    wallMesh.position.copy(position);
+                    wallMesh.rotation.y = rotation;
+                    return wallMesh;
+                }
+            };
+
+            // Create walls based on connections
+            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, containerSize.z / 2), 0, node.connections.north)); // Front (North)
+            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, -containerSize.z / 2), 0, node.connections.south)); // Back (South)
+            group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.east)); // Right (East)
+            group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(-containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.west)); // Left (West)
+
+            // Floor and Ceiling
+            const floorGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
+            const floor = new THREE.Mesh(floorGeo, containerMat);
+            floor.position.y = 0;
+            group.add(floor);
+
+            const ceilingGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
+            const ceiling = new THREE.Mesh(ceilingGeo, containerMat);
+            ceiling.position.y = containerSize.y;
+            group.add(ceiling);
+
+
+            // Add themed content if it exists
+            if (node.theme) {
+                const themedContent = node.theme(containerSize.x, containerSize.y, containerSize.z);
+                group.add(themedContent);
+            }
+
+            scene.add(group);
+        }
+
+        // --- THEME FUNCTIONS (Populate containers) ---
+        function createNoodleShop(w, h, d) {
+            const group = new THREE.Group();
+            const counterGeo = new THREE.BoxGeometry(w * 0.8, 1.2, 1);
+            const counterMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const counter = new THREE.Mesh(counterGeo, counterMat);
+            counter.position.set(0, 0.6, -d / 2 + 1);
+            group.add(counter);
+
+            const light = new THREE.PointLight(0xffa500, 50, 8);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createLivingQuarters(w, h, d) {
+            const group = new THREE.Group();
+            const loader = new GLTFLoader();
+            loader.load(
+                'https://storage.googleapis.com/sp-ar-assets/couch-b883389a-2830-449e-824b-653716631835/couch.glb',
+                (gltf) => {
+                    const model = gltf.scene;
+                    model.scale.set(1.2, 1.2, 1.2);
+                    model.position.set(-w / 2 + 2, 0.2, 0);
+                    model.rotation.y = Math.PI / 2;
+                    group.add(model);
+                },
+                undefined,
+                (error) => {
+                    console.error('Failed to load couch model', error);
+                    const fallbackBed = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, d * 0.6), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
+                    fallbackBed.position.set(-w / 2 + 1, 0.4, 0);
+                    group.add(fallbackBed);
+                }
+            );
+            return group;
+        }
+
+        function createArcade(w, h, d) {
+            const group = new THREE.Group();
+            const arcadeGeo = new THREE.BoxGeometry(1, 1.8, 1.2);
+            const arcadeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+            const arcade1 = new THREE.Mesh(arcadeGeo, arcadeMat);
+            arcade1.position.set(w / 2 - 1.5, 0.9, -2);
+            group.add(arcade1);
+
+            const screenGeo = new THREE.PlaneGeometry(0.8, 0.6);
+            const screenMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const screen1 = new THREE.Mesh(screenGeo, screenMat);
+            screen1.position.set(w / 2 - 1.5, 1.2, -2 + 0.61);
+            group.add(screen1);
+
+            const light = new THREE.PointLight(0x00ffff, 40, 10);
+            light.position.set(0, h / 2, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createHydroponics(w, h, d) {
+            const group = new THREE.Group();
+            const planterGeo = new THREE.BoxGeometry(w * 0.8, 0.5, 1);
+            const planterMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            for (let i = 0; i < 4; i++) {
+                const planter = new THREE.Mesh(planterGeo, planterMat);
+                planter.position.set(0, 0.25, -d / 2 + 1 + i * 2);
+                group.add(planter);
+            }
+            const light = new THREE.PointLight(0xff00ff, 80, 12);
+            light.position.set(0, h - 0.5, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createLookout(w, h, d) {
+            const group = new THREE.Group();
+            // This container is mostly empty to provide a view.
+            // We can add a simple railing.
+            const railGeo = new THREE.BoxGeometry(w, 0.1, 0.1);
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+            const rail = new THREE.Mesh(railGeo, railMat);
+            rail.position.set(0, 1, -d / 2 + 0.5);
+            group.add(rail);
+            return group;
+        }
+
+
+        // --- NAVIGATION & ANIMATION ---
+        function navigateToNode(nodeIndex) {
+            if (isAnimating || nodeIndex === null || nodeIndex === undefined) return;
+            isAnimating = true;
+            currentNodeIndex = nodeIndex;
+
+            const targetNode = cityLayout.find(n => n.id === nodeIndex);
+            if (!targetNode) {
+                isAnimating = false;
+                return;
+            }
+
+            // Update UI
+            titleEl.innerText = targetNode.title;
+            descEl.innerText = targetNode.desc;
             nextBtn.disabled = true;
-            const target = cameraPath[currentSceneIndex];
+
+            const cameraPos = new THREE.Vector3(
+                targetNode.pos.x,
+                targetNode.pos.y + humanHeight,
+                targetNode.pos.z + containerSize.z * 0.4
+            );
+
+            // Determine a smart look-at target
+            const nextNodeDir = Object.keys(targetNode.connections).find(key => targetNode.connections[key] !== null);
+            let lookAtPos;
+            if (nextNodeDir) {
+                const nextNode = cityLayout.find(n => n.id === targetNode.connections[nextNodeDir]);
+                if (nextNode) {
+                    lookAtPos = new THREE.Vector3(
+                        nextNode.pos.x,
+                        nextNode.pos.y + humanHeight,
+                        nextNode.pos.z
+                    );
+                }
+            }
+            // Fallback look-at
+            if (!lookAtPos) {
+                lookAtPos = new THREE.Vector3(targetNode.pos.x, targetNode.pos.y + humanHeight, targetNode.pos.z - 5);
+            }
+
 
             gsap.to(camera.position, {
-                x: target.pos.x,
-                y: target.pos.y,
-                z: target.pos.z,
-                duration: 3,
+                ...cameraPos,
+                duration: 1.5,
                 ease: 'power2.inOut'
             });
 
             gsap.to(lookAtTarget, {
-                x: target.lookAt.x,
-                y: target.lookAt.y,
-                z: target.lookAt.z,
-                duration: 3,
+                ...lookAtPos,
+                duration: 1.5,
                 ease: 'power2.inOut',
                 onComplete: () => {
-                    if (currentSceneIndex < cameraPath.length - 1) {
-                        nextBtn.disabled = false;
-                    } else {
-                        nextBtn.innerText = "Tour Complete!";
-                    }
+                    isAnimating = false;
+                    if (isAutoMode) nextBtn.disabled = false;
                 }
             });
-
-            titleEl.innerText = target.title;
-            descEl.innerText = target.desc;
         }
 
+        // --- EVENT LISTENERS ---
+        function handleKeyDown(event) {
+            if (isAnimating || isAutoMode) return;
+
+            const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
+            let nextNodeId = null;
+
+            switch (event.key) {
+                case 'ArrowUp':
+                case 'w':
+                    nextNodeId = currentNode.connections.north;
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    nextNodeId = currentNode.connections.south;
+                    break;
+                case 'ArrowLeft':
+                    nextNodeId = currentNode.connections.west;
+                    break;
+                case 'ArrowRight':
+                    nextNodeId = currentNode.connections.east;
+                    break;
+                // You could add Q/E for up/down if you prefer
+                // case 'q': nextNodeId = currentNode.connections.down; break;
+                // case 'e': nextNodeId = currentNode.connections.up; break;
+            }
+
+            // Special handling for up/down on specific nodes for clarity
+            if (currentNode.id === 1 && event.key === 'ArrowUp') nextNodeId = currentNode.connections.up;
+            if (currentNode.id === 3 && event.key === 'ArrowDown') nextNodeId = currentNode.connections.down;
+            if (currentNode.id === 3 && event.key === 'w') nextNodeId = currentNode.connections.north;
+            if (currentNode.id === 4 && event.key === 'ArrowUp') nextNodeId = currentNode.connections.up;
+            if (currentNode.id === 5 && event.key === 'ArrowDown') nextNodeId = currentNode.connections.down;
+
+
+            if (nextNodeId !== null) {
+                navigateToNode(nextNodeId);
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
         nextBtn.addEventListener('click', () => {
-            if (currentSceneIndex < cameraPath.length - 1) {
-                currentSceneIndex++;
-                moveCamera();
+            if (isAutoMode && !isAnimating) {
+                let nextIndex = (currentNodeIndex + 1) % cityLayout.length;
+                navigateToNode(nextIndex);
             }
         });
 
-        // INITIAL STATE
-        moveCamera(); // Move to the first position
+        autoModeCheckbox.addEventListener('change', (e) => {
+            isAutoMode = e.target.checked;
+            nextBtn.disabled = !isAutoMode;
+            nextBtn.style.opacity = isAutoMode ? '1' : '0.5';
+        });
 
-        // RENDER LOOP & RESIZE HANDLER
-        function animate() {
-            requestAnimationFrame(animate);
 
-            // Smoothly update lookAt target every frame
-            camera.lookAt(lookAtTarget);
-
-            renderer.render(scene, camera);
+        // --- INITIALIZATION ---
+        function buildWorld() {
+            cityLayout.forEach(node => createContainer(node));
         }
 
         function onWindowResize() {
@@ -509,10 +460,19 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-
         window.addEventListener('resize', onWindowResize);
 
-        // Set initial renderer size and start animation
+        function animate() {
+            requestAnimationFrame(animate);
+            camera.lookAt(lookAtTarget);
+            renderer.render(scene, camera);
+        }
+
+        buildWorld();
+        navigateToNode(0);
+        autoModeCheckbox.checked = false; // Start in manual mode
+        nextBtn.disabled = true;
+        nextBtn.style.opacity = '0.5';
         renderer.setSize(window.innerWidth, window.innerHeight);
         animate();
 
