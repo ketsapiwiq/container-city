@@ -47,7 +47,9 @@
 
         .mode-indicator {
             font-style: italic;
+            font-weight: bold;
             color: #4ade80;
+            transition: all 0.3s ease-in-out;
         }
 
         #nav-controls {
@@ -100,7 +102,7 @@
             <p id="scene-description">Use the arrow keys to explore the container city.</p>
         </div>
         <div id="controls-info">
-            <p><strong><span id="current-mode" class="mode-indicator">Noclip (Free) Mode</span></strong></p>
+            <p>Current Mode: <span id="current-mode" class="mode-indicator">Noclip (Free) Mode</span></p>
             <p style="margin: 5px 0;">
                 <b>Tab</b>: Toggle camera mode.
             </p>
@@ -438,7 +440,7 @@
             if (!lookAtPos) {
                 lookAtPos = new THREE.Vector3(targetNode.pos.x, targetNode.pos.y + humanHeight, targetNode.pos.z - 5);
             }
-
+            
             gsap.to(camera.position, { ...cameraPos, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(lookAtTarget, {
                 ...lookAtPos,
@@ -476,7 +478,7 @@
                 camera.position.y -= speed;
             }
         }
-
+        
         function handleSnapMovement(event) {
             if (isAnimating || isAutoMode) return;
 
@@ -508,17 +510,20 @@
                 e.preventDefault();
                 isNoclipMode = !isNoclipMode;
                 modeIndicator.textContent = isNoclipMode ? 'Noclip (Free) Mode' : 'Snap (Container) Mode';
-
+                
                 if (!isNoclipMode) {
                     const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
                     if (currentNode) {
-                        const cameraPos = new THREE.Vector3(
+                         const cameraPos = new THREE.Vector3(
                             currentNode.pos.x,
                             currentNode.pos.y + humanHeight,
                             currentNode.pos.z + containerSize.z * 0.4
                         );
                         gsap.to(camera.position, { ...cameraPos, duration: 0.5, ease: 'power2.inOut' });
+                        canvas.style.cursor = 'default';
                     }
+                } else {
+                    canvas.style.cursor = 'grab';
                 }
             }
 
@@ -550,7 +555,9 @@
 
         canvas.addEventListener('mouseup', () => {
             mouseDragging = false;
-            canvas.style.cursor = isNoclipMode ? 'grab' : 'default';
+            if(isNoclipMode) {
+                canvas.style.cursor = 'grab';
+            }
         });
 
         canvas.addEventListener('mousemove', (e) => {
@@ -609,7 +616,8 @@
         nextBtn.disabled = true;
         nextBtn.style.opacity = '0.5';
         renderer.setSize(window.innerWidth, window.innerHeight);
-
+        canvas.style.cursor = 'grab';
+        
         setTimeout(() => {
             animate();
         }, 100);
