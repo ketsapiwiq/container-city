@@ -45,6 +45,11 @@
             border-radius: 8px;
         }
 
+        .mode-indicator {
+            font-style: italic;
+            color: #4ade80;
+        }
+
         #nav-controls {
             position: absolute;
             bottom: 20px;
@@ -95,11 +100,20 @@
             <p id="scene-description">Use the arrow keys to explore the container city.</p>
         </div>
         <div id="controls-info">
-            <b>Controls:</b>
+            <p><strong><span id="current-mode" class="mode-indicator">Noclip (Free) Mode</span></strong></p>
             <p style="margin: 5px 0;">
-                <b>&uarr; / &darr; / &larr; / &rarr;</b> : Move between containers.<br>
-                <b>W / S</b> : Move Forward / Backward.<br>
-                <b>Q / E</b> : Move Up / Down.
+                <b>Tab</b>: Toggle camera mode.
+            </p>
+            <b>Noclip Controls:</b>
+            <p style="margin: 5px 0;">
+                <b>WASD / ZQSD</b> : Move.<br>
+                <b>Mouse Drag</b> : Look around.<br>
+                <b>Shift</b>: Increase speed.
+            </p>
+            <hr style="border-color: rgba(255,255,255,0.2);">
+            <b>Snap Controls:</b>
+            <p style="margin: 5px 0;">
+                <b>&uarr; / &darr; / &larr; / &rarr;</b> : Move between containers.
             </p>
         </div>
     </div>
@@ -137,7 +151,7 @@
         scene.fog = new THREE.Fog(0x050510, 20, 50);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-        const lookAtTarget = new THREE.Vector3(0, 0, 0);
+        const lookAtTarget = new THREE.Vector3(0, 2, -5); // Target for snap mode
         camera.position.set(0, 2, 10);
         camera.lookAt(lookAtTarget);
 
@@ -154,13 +168,26 @@
         let currentNodeIndex = 0;
         let isAnimating = false;
         let isAutoMode = false;
-        const loader = new GLTFLoader(); // Instantiate loader once
+        const loader = new GLTFLoader();
 
         // --- UI ELEMENTS ---
         const nextBtn = document.getElementById('next-btn');
         const autoModeCheckbox = document.getElementById('auto-mode-checkbox');
         const titleEl = document.getElementById('scene-title');
         const descEl = document.getElementById('scene-description');
+        const modeIndicator = document.getElementById('current-mode');
+
+        // --- CAMERA CONTROLS (Noclip) ---
+        let isNoclipMode = true;
+        let noclipKeys = {};
+        let isShiftPressed = false;
+        let mouseDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        const rotationSpeed = 0.002;
+        let cameraRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+        const noclipMoveSpeed = 0.1;
+        const noclipMaxMoveSpeed = 0.5;
 
         // --- CITY LAYOUT DEFINITION ---
         const cityLayout = [
@@ -259,8 +286,6 @@
         }
 
         // --- THEME FUNCTIONS (Populate containers) ---
-
-        // Noodle Shop: Added more food items
         function createNoodleShop(w, h, d) {
             const group = new THREE.Group();
             const counterGeo = new THREE.BoxGeometry(w * 0.8, 1.2, 1);
@@ -272,7 +297,6 @@
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(-1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
 
-            // Added food items
             loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(-1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/food/chopstick.glb', new THREE.Vector3(-1.5, 1.2, 0.8), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, Math.PI, Math.PI / 2));
             loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
@@ -284,7 +308,6 @@
             return group;
         }
 
-        // Living Quarters: Added more details
         function createLivingQuarters(w, h, d) {
             const group = new THREE.Group();
 
@@ -302,7 +325,6 @@
             return group;
         }
 
-        // New Cafe Theme
         function createCafe(w, h, d) {
             const group = new THREE.Group();
             loadAsset(group, 'assets/furnitures/tableRound.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
@@ -326,11 +348,9 @@
             return group;
         }
 
-        // Arcade: Replaced with actual models
         function createArcade(w, h, d) {
             const group = new THREE.Group();
 
-            // Use arcade models from the assets folder
             loadAsset(group, 'assets/arcade/pinball.glb', new THREE.Vector3(-w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
             loadAsset(group, 'assets/arcade/arcade-machine.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
             loadAsset(group, 'assets/arcade/claw-machine.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
@@ -342,7 +362,6 @@
             return group;
         }
 
-        // Hydroponics: Using potted plants
         function createHydroponics(w, h, d) {
             const group = new THREE.Group();
 
@@ -356,7 +375,6 @@
             return group;
         }
 
-        // New Storage Room Theme
         function createStorage(w, h, d) {
             const group = new THREE.Group();
 
@@ -372,7 +390,6 @@
             return group;
         }
 
-        // Lookout Point: Added more detail
         function createLookout(w, h, d) {
             const group = new THREE.Group();
             loadAsset(group, 'assets/urban/detail-barrier-strong-type-a.glb', new THREE.Vector3(0, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
@@ -386,7 +403,7 @@
         }
 
 
-        // --- NAVIGATION & ANIMATION ---
+        // --- NAVIGATION & ANIMATION (Snap Mode) ---
         function navigateToNode(nodeIndex) {
             if (isAnimating || nodeIndex === null || nodeIndex === undefined) return;
             isAnimating = true;
@@ -421,6 +438,7 @@
                 lookAtPos = new THREE.Vector3(targetNode.pos.x, targetNode.pos.y + humanHeight, targetNode.pos.z - 5);
             }
 
+            // Set the target for the smooth transition
             gsap.to(camera.position, { ...cameraPos, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(lookAtTarget, {
                 ...lookAtPos,
@@ -434,30 +452,49 @@
         }
 
         // --- EVENT LISTENERS ---
-        function handleKeyDown(event) {
+        function handleNoclipMovement() {
+            const speed = isShiftPressed ? noclipMaxMoveSpeed : noclipMoveSpeed;
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+
+            if (noclipKeys['w'] || noclipKeys['z']) {
+                camera.position.add(forward.multiplyScalar(speed));
+            }
+            if (noclipKeys['s']) {
+                camera.position.sub(forward.multiplyScalar(speed));
+            }
+            if (noclipKeys['a'] || noclipKeys['q']) {
+                camera.position.sub(right.multiplyScalar(speed));
+            }
+            if (noclipKeys['d']) {
+                camera.position.add(right.multiplyScalar(speed));
+            }
+            if (noclipKeys['e']) {
+                camera.position.y += speed;
+            }
+            if (noclipKeys['q']) {
+                camera.position.y -= speed;
+            }
+        }
+
+        function handleSnapMovement(event) {
             if (isAnimating || isAutoMode) return;
 
             const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
             let nextNodeId = null;
 
             switch (event.key.toLowerCase()) {
-                case 'arrowup': case 'w':
+                case 'arrowup':
                     nextNodeId = currentNode.connections.north;
                     break;
-                case 'arrowdown': case 's':
+                case 'arrowdown':
                     nextNodeId = currentNode.connections.south;
                     break;
-                case 'arrowleft': case 'a':
+                case 'arrowleft':
                     nextNodeId = currentNode.connections.west;
                     break;
-                case 'arrowright': case 'd':
+                case 'arrowright':
                     nextNodeId = currentNode.connections.east;
-                    break;
-                case 'q':
-                    nextNodeId = currentNode.connections.down;
-                    break;
-                case 'e':
-                    nextNodeId = currentNode.connections.up;
                     break;
             }
 
@@ -466,7 +503,70 @@
             }
         }
 
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                isNoclipMode = !isNoclipMode;
+                modeIndicator.textContent = isNoclipMode ? 'Noclip (Free) Mode' : 'Snap (Container) Mode';
+
+                // When switching to snap mode, reset the camera to the current container's view
+                if (!isNoclipMode) {
+                    const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
+                    if (currentNode) {
+                        const cameraPos = new THREE.Vector3(
+                            currentNode.pos.x,
+                            currentNode.pos.y + humanHeight,
+                            currentNode.pos.z + containerSize.z * 0.4
+                        );
+                        gsap.to(camera.position, { ...cameraPos, duration: 0.5, ease: 'power2.inOut' });
+                    }
+                }
+            }
+
+            // Only track keys for the active mode
+            if (isNoclipMode) {
+                noclipKeys[e.key.toLowerCase()] = true;
+                if (e.key === 'Shift') {
+                    isShiftPressed = true;
+                }
+            } else {
+                handleSnapMovement(e);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            noclipKeys[e.key.toLowerCase()] = false;
+            if (e.key === 'Shift') {
+                isShiftPressed = false;
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (isNoclipMode) {
+                mouseDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouseDragging = false;
+            canvas.style.cursor = isNoclipMode ? 'grab' : 'default';
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (mouseDragging && isNoclipMode) {
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                cameraRotation.y -= deltaX * rotationSpeed;
+                cameraRotation.x -= deltaY * rotationSpeed;
+                cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
+                camera.quaternion.setFromEuler(cameraRotation);
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
 
         nextBtn.addEventListener('click', () => {
             if (isAutoMode && !isAnimating) {
@@ -480,7 +580,6 @@
             nextBtn.disabled = !isAutoMode;
             nextBtn.style.opacity = isAutoMode ? '1' : '0.5';
         });
-
 
         // --- INITIALIZATION ---
         function buildWorld() {
@@ -496,7 +595,13 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            camera.lookAt(lookAtTarget);
+
+            if (isNoclipMode) {
+                handleNoclipMovement();
+            } else {
+                camera.lookAt(lookAtTarget);
+            }
+
             renderer.render(scene, camera);
         }
 
@@ -506,8 +611,11 @@
         nextBtn.disabled = true;
         nextBtn.style.opacity = '0.5';
         renderer.setSize(window.innerWidth, window.innerHeight);
-        animate();
 
+        // Wait a moment before starting the animation for assets to load
+        setTimeout(() => {
+            animate();
+        }, 100);
     </script>
 </body>
 
