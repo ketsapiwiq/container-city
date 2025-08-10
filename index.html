@@ -107,6 +107,7 @@
             <b>Noclip Controls:</b>
             <p style="margin: 5px 0;">
                 <b>WASD / ZQSD</b> : Move.<br>
+                <b>R / F</b> : Move Up / Down.<br>
                 <b>Mouse Drag</b> : Look around.<br>
                 <b>Shift</b>: Increase speed.
             </p>
@@ -438,7 +439,6 @@
                 lookAtPos = new THREE.Vector3(targetNode.pos.x, targetNode.pos.y + humanHeight, targetNode.pos.z - 5);
             }
 
-            // Set the target for the smooth transition
             gsap.to(camera.position, { ...cameraPos, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(lookAtTarget, {
                 ...lookAtPos,
@@ -469,10 +469,10 @@
             if (noclipKeys['d']) {
                 camera.position.add(right.multiplyScalar(speed));
             }
-            if (noclipKeys['e']) {
+            if (noclipKeys['r']) {
                 camera.position.y += speed;
             }
-            if (noclipKeys['q']) {
+            if (noclipKeys['f']) {
                 camera.position.y -= speed;
             }
         }
@@ -483,17 +483,17 @@
             const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
             let nextNodeId = null;
 
-            switch (event.key.toLowerCase()) {
-                case 'arrowup':
+            switch (event.key) { // Check for the key's name, which includes "Arrow"
+                case 'ArrowUp':
                     nextNodeId = currentNode.connections.north;
                     break;
-                case 'arrowdown':
+                case 'ArrowDown':
                     nextNodeId = currentNode.connections.south;
                     break;
-                case 'arrowleft':
+                case 'ArrowLeft':
                     nextNodeId = currentNode.connections.west;
                     break;
-                case 'arrowright':
+                case 'ArrowRight':
                     nextNodeId = currentNode.connections.east;
                     break;
             }
@@ -509,7 +509,6 @@
                 isNoclipMode = !isNoclipMode;
                 modeIndicator.textContent = isNoclipMode ? 'Noclip (Free) Mode' : 'Snap (Container) Mode';
 
-                // When switching to snap mode, reset the camera to the current container's view
                 if (!isNoclipMode) {
                     const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
                     if (currentNode) {
@@ -523,7 +522,6 @@
                 }
             }
 
-            // Only track keys for the active mode
             if (isNoclipMode) {
                 noclipKeys[e.key.toLowerCase()] = true;
                 if (e.key === 'Shift') {
@@ -612,7 +610,6 @@
         nextBtn.style.opacity = '0.5';
         renderer.setSize(window.innerWidth, window.innerHeight);
 
-        // Wait a moment before starting the animation for assets to load
         setTimeout(() => {
             animate();
         }, 100);
