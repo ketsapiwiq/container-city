@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Container City Explorer</title>
+    <title>Three.js Kowloon Container City</title>
     <style>
         body {
             margin: 0;
@@ -116,7 +116,8 @@
             <hr style="border-color: rgba(255,255,255,0.2);">
             <b>Snap Controls:</b>
             <p style="margin: 5px 0;">
-                <b>&uarr; / &darr; / &larr; / &rarr;</b> : Move between containers.
+                <b>WASD / Arrow Keys</b> : Move Horizontally.<br>
+                <b>R / F</b> : Move Up / Down.
             </p>
         </div>
     </div>
@@ -151,7 +152,7 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x050510);
-        scene.fog = new THREE.Fog(0x050510, 20, 50);
+        scene.fog = new THREE.Fog(0x050510, 25, 80);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const lookAtTarget = new THREE.Vector3(0, 2, -5); // Target for snap mode
@@ -168,6 +169,8 @@
         const containerSize = new THREE.Vector3(8, 4, 10);
         const wallThickness = 0.2;
         const humanHeight = 1.7;
+        const gridDims = { x: 3, y: 3, z: 3 };
+        const spacing = { x: 10, y: 5, z: 12 };
         let currentNodeIndex = 0;
         let isAnimating = false;
         let isAutoMode = false;
@@ -193,15 +196,7 @@
         const noclipMaxMoveSpeed = 0.5;
 
         // --- CITY LAYOUT DEFINITION ---
-        const cityLayout = [
-            { id: 0, pos: new THREE.Vector3(0, 0, 0), theme: createNoodleShop, title: "Noodle Shop", desc: "A cozy noodle shop. The steam warms the cold metal walls.", connections: { north: 1 } },
-            { id: 1, pos: new THREE.Vector3(0, 0, -12), theme: createLivingQuarters, title: "Living Quarters", desc: "A cramped but functional living space.", connections: { south: 0, up: 2 } },
-            { id: 2, pos: new THREE.Vector3(0, 5, -12), theme: createArcade, title: "Mini Arcade", desc: "A noisy, flashing escape from the quiet hum of the city.", connections: { down: 1, west: 3, east: 4 } },
-            { id: 3, pos: new THREE.Vector3(-10, 5, -12), theme: createCafe, title: "Container Cafe", desc: "The aroma of coffee lingers in the air. A place to relax and recharge.", connections: { east: 2 } },
-            { id: 4, pos: new THREE.Vector3(10, 5, -12), theme: createHydroponics, title: "Hydroponics Bay", desc: "The source of fresh greens, glowing under purple lights.", connections: { west: 2, north: 5 } },
-            { id: 5, pos: new THREE.Vector3(10, 5, -24), theme: createStorage, title: "Storage Room", desc: "A disorganized pile of old stuff and forgotten crates.", connections: { south: 4, up: 6 } },
-            { id: 6, pos: new THREE.Vector3(10, 10, -24), theme: createLookout, title: "Lookout Point", desc: "A vantage point overlooking the foggy, sprawling container city below.", connections: { down: 5 } },
-        ];
+        const cityLayout = [];
 
         // --- ASSET LOADING HELPER ---
         function loadAsset(group, path, pos, scale, rot) {
@@ -225,7 +220,6 @@
             group.position.copy(node.pos);
 
             const containerMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8, roughness: 0.5 });
-
             const doorSize = { width: 2, height: 3 };
 
             const createWall = (size, position, rotation, connection) => {
@@ -233,14 +227,17 @@
                     const wallGroup = new THREE.Group();
                     const wallW = size.x > size.z ? size.x : size.z;
                     const sideWidth = (wallW - doorSize.width) / 2;
+
                     const leftGeo = new THREE.BoxGeometry(sideWidth, size.y, wallThickness);
                     const leftMesh = new THREE.Mesh(leftGeo, containerMat);
                     leftMesh.position.x = -(doorSize.width / 2 + sideWidth / 2);
                     wallGroup.add(leftMesh);
+
                     const rightGeo = new THREE.BoxGeometry(sideWidth, size.y, wallThickness);
                     const rightMesh = new THREE.Mesh(rightGeo, containerMat);
                     rightMesh.position.x = (doorSize.width / 2 + sideWidth / 2);
                     wallGroup.add(rightMesh);
+
                     const topHeight = size.y - doorSize.height;
                     if (topHeight > 0) {
                         const topGeo = new THREE.BoxGeometry(doorSize.width, topHeight, wallThickness);
@@ -260,31 +257,32 @@
                 }
             };
 
-            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, containerSize.z / 2), 0, node.connections.north));
-            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, -containerSize.z / 2), 0, node.connections.south));
+            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, -containerSize.z / 2), 0, node.connections.north));
+            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, containerSize.z / 2), 0, node.connections.south));
             group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.east));
             group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(-containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.west));
 
-            const floorGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
-            const floor = new THREE.Mesh(floorGeo, containerMat);
-            floor.position.y = 0;
-            group.add(floor);
-
-            const ceilingGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
-            const ceiling = new THREE.Mesh(ceilingGeo, containerMat);
-            ceiling.position.y = containerSize.y;
-            group.add(ceiling);
-
+            // Floor and Ceiling - check for up/down connections
+            if (node.connections.down === null) {
+                const floorGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
+                const floor = new THREE.Mesh(floorGeo, containerMat);
+                floor.position.y = 0;
+                group.add(floor);
+            }
+            if (node.connections.up === null) {
+                const ceilingGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
+                const ceiling = new THREE.Mesh(ceilingGeo, containerMat);
+                ceiling.position.y = containerSize.y;
+                group.add(ceiling);
+            }
             // Add a default dim light to every container to avoid total darkness
             const defaultLight = new THREE.PointLight(0x333344, 5, 10);
             defaultLight.position.set(0, containerSize.y - 1, 0);
             group.add(defaultLight);
-
             if (node.theme) {
                 const themedContent = node.theme(containerSize.x, containerSize.y, containerSize.z);
                 group.add(themedContent);
             }
-
             scene.add(group);
         }
 
@@ -296,15 +294,10 @@
             const counter = new THREE.Mesh(counterGeo, counterMat);
             counter.position.set(0, 0.6, -d / 2 + 1);
             group.add(counter);
-
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(-1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-
             loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(-1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/food/chopstick.glb', new THREE.Vector3(-1.5, 1.2, 0.8), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, Math.PI, Math.PI / 2));
             loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/food/chopstick.glb', new THREE.Vector3(1.5, 1.2, 0.8), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, Math.PI, Math.PI / 2));
-
             const light = new THREE.PointLight(0xffa500, 50, 8);
             light.position.set(0, h - 1, 0);
             group.add(light);
@@ -313,18 +306,13 @@
 
         function createLivingQuarters(w, h, d) {
             const group = new THREE.Group();
-
             loadAsset(group, 'assets/cyberpunk/sofa_couch.glb', new THREE.Vector3(-w / 2 + 2, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/tableCoffee.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/televisionModern.glb', new THREE.Vector3(w / 2 - 1, 0.8, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
-            loadAsset(group, 'assets/furnitures/books.glb', new THREE.Vector3(w / 2 - 1, 1.4, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-
-
             const light = new THREE.PointLight(0xeeeeff, 25, 12);
             light.position.set(0, h - 1, 0);
             group.add(light);
-
             return group;
         }
 
@@ -334,44 +322,29 @@
             loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(0, 0, -2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(0, 0, 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
             loadAsset(group, 'assets/food/cup-coffee.glb', new THREE.Vector3(0, 0.7, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/food/donut-chocolate.glb', new THREE.Vector3(0, 0.7, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(Math.PI / 2, 0, 0));
-
-            const counterGeo = new THREE.BoxGeometry(w * 0.8, 1.2, 1.5);
-            const counterMat = new THREE.MeshStandardMaterial({ color: 0x964B00 });
-            const counter = new THREE.Mesh(counterGeo, counterMat);
-            counter.position.set(0, 0.6, -d / 2 + 1);
-            group.add(counter);
-
-            loadAsset(group, 'assets/food/cup-coffee.glb', new THREE.Vector3(0, 1.2, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-
             const light = new THREE.PointLight(0xffddaa, 30, 10);
             light.position.set(0, h - 1, 0);
             group.add(light);
-
             return group;
         }
 
         function createArcade(w, h, d) {
             const group = new THREE.Group();
-
-            loadAsset(group, 'assets/arcade/pinball.glb', new THREE.Vector3(-w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
-            loadAsset(group, 'assets/arcade/arcade-machine.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/arcade/pinball.glb', new THREE.Vector3(-w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/arcade/arcade-machine.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/arcade/claw-machine.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
-            loadAsset(group, 'assets/arcade/prizes.glb', new THREE.Vector3(w / 2 - 1, 0.8, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
-
-            const light = new THREE.PointLight(0x00ffff, 40, 10);
-            light.position.set(0, h / 2, 0);
-            group.add(light);
+            const light1 = new THREE.PointLight(0x00ffff, 40, 10);
+            light1.position.set(-w / 4, h / 2, -d / 2 + 2); group.add(light1);
+            const light2 = new THREE.PointLight(0xff00ff, 40, 10);
+            light2.position.set(w / 4, h / 2, -d / 2 + 2); group.add(light2);
             return group;
         }
 
         function createHydroponics(w, h, d) {
             const group = new THREE.Group();
-
             for (let i = 0; i < 4; i++) {
                 loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(0, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             }
-
             const light = new THREE.PointLight(0xff00ff, 80, 12);
             light.position.set(0, h - 0.5, 0);
             group.add(light);
@@ -380,16 +353,12 @@
 
         function createStorage(w, h, d) {
             const group = new THREE.Group();
-
             loadAsset(group, 'assets/urban/pallet.glb', new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/urban/pallet.glb', new THREE.Vector3(1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(-1.5, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/cardboardBoxClosed.glb', new THREE.Vector3(1.5, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/urban/trashcan.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-
             const light = new THREE.PointLight(0xaaaaaa, 20, 15);
-            light.position.set(0, h - 1, 0);
-            group.add(light);
+            light.position.set(0, h - 1, 0); group.add(light);
             return group;
         }
 
@@ -398,13 +367,108 @@
             loadAsset(group, 'assets/urban/detail-barrier-strong-type-a.glb', new THREE.Vector3(0, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/urban/detail-bench.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
             loadAsset(group, 'assets/urban/detail-light-single.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
-
             const light = new THREE.PointLight(0x6677aa, 20, 15);
+            light.position.set(0, h - 1, 0); group.add(light);
+            return group;
+        }
+
+        function createBedroom(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/bedSingle.glb', new THREE.Vector3(w / 2 - 1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/pillow.glb', new THREE.Vector3(w / 2 - 1.5, 0.6, -0.4), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/sideTableDrawers.glb', new THREE.Vector3(w / 2 - 1.5, 0, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/lampRoundTable.glb', new THREE.Vector3(w / 2 - 1.5, 0.5, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/rugRound.glb', new THREE.Vector3(0, 0.01, 0), new THREE.Vector3(2, 1, 2), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/bookcaseOpen.glb', new THREE.Vector3(-w / 2 + 0.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            const light = new THREE.PointLight(0xffeedd, 35, 10);
+            light.position.set(w / 2 - 1.5, 2, 1);
+            group.add(light);
+            return group;
+        }
+
+        function createBathroom(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/toiletSquare.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/showerRound.glb', new THREE.Vector3(w / 2 - 1.5, 0, -d / 2 + 1.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/bathroomSink.glb', new THREE.Vector3(-w / 2 + 1, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/furnitures/bathroomMirror.glb', new THREE.Vector3(-w / 2 + 0.15, 1.5, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            const light = new THREE.PointLight(0xddddff, 40, 12);
             light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
         }
 
+        function createKitchen(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/kitchenFridge.glb', new THREE.Vector3(w / 2 - 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/furnitures/kitchenCabinet.glb', new THREE.Vector3(w / 2 - 2.5, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/furnitures/kitchenStove.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/table.glb', new THREE.Vector3(0, 0, 1), new THREE.Vector3(1.5, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/food/cutting-board.glb', new THREE.Vector3(0, 0.75, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/carrot.glb', new THREE.Vector3(-0.2, 0.8, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0.2, 0.5, 0));
+            const light = new THREE.PointLight(0xffffff, 40, 15);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createHackerDen(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/deskCorner.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/computerScreen.glb', new THREE.Vector3(-w / 2 + 1, 1, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.3, 0));
+            loadAsset(group, 'assets/furnitures/computerScreen.glb', new THREE.Vector3(-w / 2 + 2.2, 1, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -0.3, 0));
+            loadAsset(group, 'assets/furnitures/chairDesk.glb', new THREE.Vector3(-w / 2 + 2.5, 0, -d / 2 + 2.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 2.5, 0));
+            loadAsset(group, 'assets/food/pizza-box.glb', new THREE.Vector3(w / 2 - 1, 0.01, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 1, 0.1));
+            loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(w / 2 - 1.5, 0.01, d / 2 - 1.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0));
+            const screenLight1 = new THREE.PointLight(0x00ffaa, 20, 5);
+            screenLight1.position.set(-w / 2 + 1, 1.2, -d / 2 + 1.5);
+            group.add(screenLight1);
+            return group;
+        }
+
+        function createLaundry(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/washerDryerStacked.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/washerDryerStacked.glb', new THREE.Vector3(-w / 2 + 1, 0, 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/bench.glb', new THREE.Vector3(w / 2 - 2, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            const light = new THREE.PointLight(0xccffee, 30, 15);
+            light.position.set(0, h - 0.5, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createWorkshop(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/desk.glb', new THREE.Vector3(-w / 2 + 2, 0, -d / 2 + 1), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/planks.glb', new THREE.Vector3(w / 4, 0.15, d / 4), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/barrel.glb', new THREE.Vector3(-w / 2 + 1, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            const light = new THREE.PointLight(0xffff99, 40, 12, 2);
+            light.position.set(0, h - 0.5, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createEmptyContainer(w, h, d) {
+            const group = new THREE.Group();
+            loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(1, 0, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0.2));
+            loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            const light = new THREE.PointLight(0x555566, 15, 15);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
+            return group;
+        }
+
+        function createServerRoom(w, h, d) {
+            const group = new THREE.Group();
+            for (let i = 0; i < 4; i++) {
+                loadAsset(group, 'assets/furnitures/bookcaseClosedWide.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+                loadAsset(group, 'assets/furnitures/bookcaseClosedWide.glb', new THREE.Vector3(w / 2 - 1, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            }
+            const light = new THREE.PointLight(0x00aaff, 60, 10);
+            light.position.set(0, h / 2, 0);
+            group.add(light);
+            return group;
+        }
 
         // --- NAVIGATION & ANIMATION (Snap Mode) ---
         function navigateToNode(nodeIndex) {
@@ -429,18 +493,19 @@
             );
 
             let lookAtPos;
-            const primaryDirection = targetNode.connections.north ?? targetNode.connections.east ?? targetNode.connections.south ?? targetNode.connections.west ?? null;
-            if (primaryDirection !== null) {
-                const nextNode = cityLayout.find(n => n.id === primaryDirection);
+            const connections = targetNode.connections;
+            const primaryDirectionId = connections.north ?? connections.east ?? connections.south ?? connections.west ?? connections.up ?? connections.down ?? null;
+
+            if (primaryDirectionId !== null) {
+                const nextNode = cityLayout.find(n => n.id === primaryDirectionId);
                 if (nextNode) {
                     lookAtPos = new THREE.Vector3(nextNode.pos.x, nextNode.pos.y + humanHeight, nextNode.pos.z);
                 }
             }
-
             if (!lookAtPos) {
                 lookAtPos = new THREE.Vector3(targetNode.pos.x, targetNode.pos.y + humanHeight, targetNode.pos.z - 5);
             }
-            
+
             gsap.to(camera.position, { ...cameraPos, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(lookAtTarget, {
                 ...lookAtPos,
@@ -458,48 +523,27 @@
             const speed = isShiftPressed ? noclipMaxMoveSpeed : noclipMoveSpeed;
             const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
             const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-
-            if (noclipKeys['w'] || noclipKeys['z']) {
-                camera.position.add(forward.multiplyScalar(speed));
-            }
-            if (noclipKeys['s']) {
-                camera.position.sub(forward.multiplyScalar(speed));
-            }
-            if (noclipKeys['a'] || noclipKeys['q']) {
-                camera.position.sub(right.multiplyScalar(speed));
-            }
-            if (noclipKeys['d']) {
-                camera.position.add(right.multiplyScalar(speed));
-            }
-            if (noclipKeys['r']) {
-                camera.position.y += speed;
-            }
-            if (noclipKeys['f']) {
-                camera.position.y -= speed;
-            }
+            if (noclipKeys['w'] || noclipKeys['z']) camera.position.add(forward.clone().multiplyScalar(speed));
+            if (noclipKeys['s']) camera.position.sub(forward.clone().multiplyScalar(speed));
+            if (noclipKeys['a'] || noclipKeys['q']) camera.position.sub(right.clone().multiplyScalar(speed));
+            if (noclipKeys['d']) camera.position.add(right.clone().multiplyScalar(speed));
+            if (noclipKeys['r']) camera.position.y += speed;
+            if (noclipKeys['f']) camera.position.y -= speed;
         }
-        
+
         function handleSnapMovement(event) {
             if (isAnimating || isAutoMode) return;
-
             const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
             let nextNodeId = null;
 
-            switch (event.key) { // Check for the key's name, which includes "Arrow"
-                case 'ArrowUp':
-                    nextNodeId = currentNode.connections.north;
-                    break;
-                case 'ArrowDown':
-                    nextNodeId = currentNode.connections.south;
-                    break;
-                case 'ArrowLeft':
-                    nextNodeId = currentNode.connections.west;
-                    break;
-                case 'ArrowRight':
-                    nextNodeId = currentNode.connections.east;
-                    break;
+            switch (event.key.toLowerCase()) {
+                case 'arrowup': case 'w': nextNodeId = currentNode.connections.north; break;
+                case 'arrowdown': case 's': nextNodeId = currentNode.connections.south; break;
+                case 'arrowleft': case 'a': nextNodeId = currentNode.connections.west; break;
+                case 'arrowright': case 'd': nextNodeId = currentNode.connections.east; break;
+                case 'r': nextNodeId = currentNode.connections.up; break;
+                case 'f': nextNodeId = currentNode.connections.down; break;
             }
-
             if (nextNodeId !== undefined && nextNodeId !== null) {
                 navigateToNode(nextNodeId);
             }
@@ -510,15 +554,10 @@
                 e.preventDefault();
                 isNoclipMode = !isNoclipMode;
                 modeIndicator.textContent = isNoclipMode ? 'Noclip (Free) Mode' : 'Snap (Container) Mode';
-                
                 if (!isNoclipMode) {
                     const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
                     if (currentNode) {
-                         const cameraPos = new THREE.Vector3(
-                            currentNode.pos.x,
-                            currentNode.pos.y + humanHeight,
-                            currentNode.pos.z + containerSize.z * 0.4
-                        );
+                        const cameraPos = new THREE.Vector3(currentNode.pos.x, currentNode.pos.y + humanHeight, currentNode.pos.z + containerSize.z * 0.4);
                         gsap.to(camera.position, { ...cameraPos, duration: 0.5, ease: 'power2.inOut' });
                         canvas.style.cursor = 'default';
                     }
@@ -526,12 +565,9 @@
                     canvas.style.cursor = 'grab';
                 }
             }
-
             if (isNoclipMode) {
                 noclipKeys[e.key.toLowerCase()] = true;
-                if (e.key === 'Shift') {
-                    isShiftPressed = true;
-                }
+                if (e.key === 'Shift') isShiftPressed = true;
             } else {
                 handleSnapMovement(e);
             }
@@ -539,9 +575,7 @@
 
         window.addEventListener('keyup', (e) => {
             noclipKeys[e.key.toLowerCase()] = false;
-            if (e.key === 'Shift') {
-                isShiftPressed = false;
-            }
+            if (e.key === 'Shift') isShiftPressed = false;
         });
 
         canvas.addEventListener('mousedown', (e) => {
@@ -552,14 +586,10 @@
                 canvas.style.cursor = 'grabbing';
             }
         });
-
         canvas.addEventListener('mouseup', () => {
             mouseDragging = false;
-            if(isNoclipMode) {
-                canvas.style.cursor = 'grab';
-            }
+            if (isNoclipMode) canvas.style.cursor = 'grab';
         });
-
         canvas.addEventListener('mousemove', (e) => {
             if (mouseDragging && isNoclipMode) {
                 const deltaX = e.clientX - lastMouseX;
@@ -579,7 +609,6 @@
                 navigateToNode(nextIndex);
             }
         });
-
         autoModeCheckbox.addEventListener('change', (e) => {
             isAutoMode = e.target.checked;
             nextBtn.disabled = !isAutoMode;
@@ -587,7 +616,62 @@
         });
 
         // --- INITIALIZATION ---
+        function generateCityLayout() {
+            const themePool = [
+                { func: createNoodleShop, title: "Noodle Shop", desc: "A cozy noodle shop. The steam warms the cold metal walls." },
+                { func: createLivingQuarters, title: "Living Quarters", desc: "A cramped but functional living space." },
+                { func: createArcade, title: "Mini Arcade", desc: "A noisy, flashing escape from the quiet hum of the city." },
+                { func: createCafe, title: "Container Cafe", desc: "The aroma of coffee lingers in the air." },
+                { func: createHydroponics, title: "Hydroponics Bay", desc: "The source of fresh greens, glowing under purple lights." },
+                { func: createStorage, title: "Storage Room", desc: "A disorganized pile of old stuff and forgotten crates." },
+                { func: createLookout, title: "Lookout Point", desc: "A vantage point overlooking the foggy, sprawling container city below." },
+                { func: createBedroom, title: "Bedroom", desc: "A small, personal space to rest." },
+                { func: createBathroom, title: "Communal Bathroom", desc: "Clean, sterile, and functional." },
+                { func: createKitchen, title: "Shared Kitchen", desc: "The smells of a dozen different meals being cooked." },
+                { func: createHackerDen, title: "Hacker's Den", desc: "Keep out. The hum of fans and clicking of keys is constant." },
+                { func: createLaundry, title: "Laundry Room", desc: "The constant churn of washers and dryers." },
+                { func: createWorkshop, title: "Workshop", desc: "A place for repairs and tinkering. Smells of oil and ozone." },
+                { func: createEmptyContainer, title: "Abandoned Unit", desc: "Empty, save for some dust and echoes." },
+                { func: createServerRoom, title: "Server Room", desc: "The cool, loud heart of the local network." }
+            ];
+
+            const getId = (x, y, z) => x + y * gridDims.x + z * gridDims.x * gridDims.y;
+
+            for (let z = 0; z < gridDims.z; z++) {
+                for (let y = 0; y < gridDims.y; y++) {
+                    for (let x = 0; x < gridDims.x; x++) {
+                        const id = getId(x, y, z);
+                        const pos = new THREE.Vector3((x - (gridDims.x - 1) / 2) * spacing.x, y * spacing.y, (z - (gridDims.z - 1) / 2) * -spacing.z);
+                        const connections = {
+                            north: z > 0 ? getId(x, y, z - 1) : null,
+                            south: z < gridDims.z - 1 ? getId(x, y, z + 1) : null,
+                            west: x > 0 ? getId(x - 1, y, z) : null,
+                            east: x < gridDims.x - 1 ? getId(x + 1, y, z) : null,
+                            up: y < gridDims.y - 1 ? getId(x, y + 1, z) : null,
+                            down: y > 0 ? getId(x, y - 1, z) : null,
+                        };
+                        const themeData = themePool[id % themePool.length];
+                        cityLayout.push({ id, pos, theme: themeData.func, title: themeData.title, desc: themeData.desc, connections });
+                    }
+                }
+            }
+            // Randomly prune connections to make it more maze-like
+            cityLayout.forEach(node => {
+                const directionsToPrune = ['east', 'south', 'up'];
+                directionsToPrune.forEach(dir => {
+                    const neighborId = node.connections[dir];
+                    if (neighborId !== null && Math.random() < 0.35) { // 35% prune chance
+                        const neighborNode = cityLayout.find(n => n.id === neighborId);
+                        const oppositeDir = { east: 'west', south: 'north', up: 'down' }[dir];
+                        node.connections[dir] = null;
+                        if (neighborNode) neighborNode.connections[oppositeDir] = null;
+                    }
+                });
+            });
+        }
+
         function buildWorld() {
+            generateCityLayout();
             cityLayout.forEach(node => createContainer(node));
         }
 
@@ -600,27 +684,28 @@
 
         function animate() {
             requestAnimationFrame(animate);
-
             if (isNoclipMode) {
                 handleNoclipMovement();
             } else {
                 camera.lookAt(lookAtTarget);
             }
-
             renderer.render(scene, camera);
         }
 
         buildWorld();
-        navigateToNode(0);
+        const startNodeId = Math.floor(cityLayout.length / 2); // Start in the middle
+        navigateToNode(startNodeId);
         autoModeCheckbox.checked = false;
         nextBtn.disabled = true;
         nextBtn.style.opacity = '0.5';
         renderer.setSize(window.innerWidth, window.innerHeight);
         canvas.style.cursor = 'grab';
-        
+
+        // Brief timeout to ensure models have a chance to start loading
         setTimeout(() => {
             animate();
-        }, 100);
+        }, 200);
+
     </script>
 </body>
 
