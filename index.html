@@ -64,18 +64,18 @@
     </div>
     <button id="next-btn">Next Scene</button>
     <canvas id="c"></canvas>
-
     <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.167.0/build/three.module.js",
-            "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
-        }
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.167.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.167.0/examples/jsm/",
+        "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
     }
-    </script>
-
+}
+</script>
     <script type="module">
         import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { gsap } from 'gsap';
 
         // SCENE SETUP
@@ -212,13 +212,12 @@
         function createSolarpunkLivingRoom(w, h, d) {
             const group = new THREE.Group();
 
-            // Bright floor
+            // Bright floor (same as before)
             const floor = new THREE.Mesh(new THREE.BoxGeometry(w, wallThickness, d), new THREE.MeshStandardMaterial({ color: 0x90ee90 }));
-            floor.position.y = wallThickness; // place on top of base floor
+            floor.position.y = wallThickness;
             group.add(floor);
 
-            // "Plant" placeholders (spheres and cylinders)
-
+            // "Plant" placeholders (same as before)
             const plantGeo = new THREE.CylinderGeometry(0.5, 0.6, 1.2, 8);
             const plantMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
             const planter1 = new THREE.Mesh(plantGeo, plantMat);
@@ -231,15 +230,46 @@
             foliage1.position.set(-w / 2 + 1, 1.8, -d / 2 + 1.5);
             group.add(foliage1);
 
-            // "Sofa" placeholder
-            // const sofaGeo = new THREE.BoxGeometry(4, 1, 1.5);
-            // const sofaMat = new THREE.MeshSolarStandardMaterial({ color: 0xF5F5DC });
-            // const sofa = new THREE.Mesh(sofaGeo, sofaMat);
-            // sofa.position.set(0, 0.5, d / 2 - 2);
-            // group.add(sofa); // This is where you would load a couch.gltf
+            // --- NEW GLTF LOADER CODE ---
+            // 1. Instantiate the loader
+            const loader = new GLTFLoader();
 
-            
-            // Bright light source
+            // 2. Load the model
+            loader.load(
+                // Resource URL - replace this with your model's URL or local path (if using a server)
+                'http://127.0.0.1:8080/assets/sofa_couch.glb',
+
+                // onLoad callback: executed when the model has loaded
+                function (gltf) {
+                    const model = gltf.scene;
+
+                    // Position, scale, and rotate the model to fit the scene
+                    model.position.set(0, 0.2, d / 2 - 2); // Adjust position
+                    model.scale.set(1.5, 1.5, 1.5);      // Adjust scale
+                    model.rotation.y = Math.PI;         // Rotate 180 degrees
+
+                    // Add the loaded model to our room's group
+                    group.add(model);
+                },
+
+                // onProgress callback (optional)
+                function (xhr) {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+
+                // onError callback (optional)
+                function (error) {
+                    console.error('An error happened while loading the model:', error);
+                    // As a fallback, you could add the placeholder box here
+                    const sofaGeo = new THREE.BoxGeometry(4, 1, 1.5);
+                    const sofaMat = new THREE.MeshStandardMaterial({ color: 0xF5F5DC });
+                    const sofa = new THREE.Mesh(sofaGeo, sofaMat);
+                    sofa.position.set(0, 0.5, d / 2 - 2);
+                    group.add(sofa);
+                }
+            );
+
+            // Bright light source (same as before)
             const light = new THREE.PointLight(0xFFFFE0, 20, 15);
             light.position.set(0, h - 1, 0);
             group.add(light);
