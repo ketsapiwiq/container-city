@@ -98,7 +98,8 @@
             <b>Controls:</b>
             <p style="margin: 5px 0;">
                 <b>&uarr; / &darr; / &larr; / &rarr;</b> : Move between containers.<br>
-                <b>W / S</b> : Move Forward / Backward.
+                <b>W / S</b> : Move Forward / Backward.<br>
+                <b>Q / E</b> : Move Up / Down.
             </p>
         </div>
     </div>
@@ -153,6 +154,7 @@
         let currentNodeIndex = 0;
         let isAnimating = false;
         let isAutoMode = false;
+        const loader = new GLTFLoader(); // Instantiate loader once
 
         // --- UI ELEMENTS ---
         const nextBtn = document.getElementById('next-btn');
@@ -161,8 +163,6 @@
         const descEl = document.getElementById('scene-description');
 
         // --- CITY LAYOUT DEFINITION ---
-        // This is the "map" of our city. Each object is a container node.
-        // Connections link nodes by their ID.
         const cityLayout = [
             { id: 0, pos: new THREE.Vector3(0, 0, 0), theme: createNoodleShop, title: "Noodle Shop", desc: "A cozy noodle shop. The steam warms the cold metal walls.", connections: { north: 1 } },
             { id: 1, pos: new THREE.Vector3(0, 0, -12), theme: createLivingQuarters, title: "Living Quarters", desc: "A cramped but functional living space.", connections: { south: 0, east: 2, up: 3 } },
@@ -171,6 +171,22 @@
             { id: 4, pos: new THREE.Vector3(0, 5, -24), theme: null, title: "Empty Container", desc: "This container is cold and empty. A faint breeze comes from an opening above.", connections: { south: 3, up: 5 } },
             { id: 5, pos: new THREE.Vector3(0, 10, -24), theme: createLookout, title: "Lookout Point", desc: "A vantage point overlooking the foggy, sprawling container city below.", connections: { down: 4 } },
         ];
+
+        // --- ASSET LOADING HELPER ---
+        function loadAsset(group, path, pos, scale, rot) {
+            loader.load(
+                path,
+                (gltf) => {
+                    const model = gltf.scene;
+                    model.scale.set(scale.x, scale.y, scale.z);
+                    model.position.set(pos.x, pos.y, pos.z);
+                    model.rotation.set(rot.x, rot.y, rot.z);
+                    group.add(model);
+                },
+                undefined,
+                (error) => console.error(`Failed to load model at ${path}`, error)
+            );
+        }
 
         // --- CONTAINER CREATION LOGIC ---
         function createContainer(node) {
@@ -181,27 +197,19 @@
 
             const doorSize = { width: 2, height: 3 };
 
-            // Helper to create a wall with a potential opening
             const createWall = (size, position, rotation, connection) => {
                 if (connection !== undefined && connection !== null) {
-                    // Wall with doorway
                     const wallGroup = new THREE.Group();
                     const wallW = size.x > size.z ? size.x : size.z;
                     const sideWidth = (wallW - doorSize.width) / 2;
-
-                    // Left part
                     const leftGeo = new THREE.BoxGeometry(sideWidth, size.y, wallThickness);
                     const leftMesh = new THREE.Mesh(leftGeo, containerMat);
                     leftMesh.position.x = -(doorSize.width / 2 + sideWidth / 2);
                     wallGroup.add(leftMesh);
-
-                    // Right part
                     const rightGeo = new THREE.BoxGeometry(sideWidth, size.y, wallThickness);
                     const rightMesh = new THREE.Mesh(rightGeo, containerMat);
                     rightMesh.position.x = (doorSize.width / 2 + sideWidth / 2);
                     wallGroup.add(rightMesh);
-
-                    // Top part
                     const topHeight = size.y - doorSize.height;
                     if (topHeight > 0) {
                         const topGeo = new THREE.BoxGeometry(doorSize.width, topHeight, wallThickness);
@@ -213,7 +221,6 @@
                     wallGroup.rotation.y = rotation;
                     return wallGroup;
                 } else {
-                    // Solid wall
                     const wallGeo = new THREE.BoxGeometry(size.x, size.y, size.z);
                     const wallMesh = new THREE.Mesh(wallGeo, containerMat);
                     wallMesh.position.copy(position);
@@ -222,13 +229,11 @@
                 }
             };
 
-            // Create walls based on connections
-            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, containerSize.z / 2), 0, node.connections.north)); // Front (North)
-            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, -containerSize.z / 2), 0, node.connections.south)); // Back (South)
-            group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.east)); // Right (East)
-            group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(-containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.west)); // Left (West)
+            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, containerSize.z / 2), 0, node.connections.north));
+            group.add(createWall(new THREE.Vector3(containerSize.x, containerSize.y, wallThickness), new THREE.Vector3(0, containerSize.y / 2, -containerSize.z / 2), 0, node.connections.south));
+            group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.east));
+            group.add(createWall(new THREE.Vector3(containerSize.z, containerSize.y, wallThickness), new THREE.Vector3(-containerSize.x / 2, containerSize.y / 2, 0), Math.PI / 2, node.connections.west));
 
-            // Floor and Ceiling
             const floorGeo = new THREE.BoxGeometry(containerSize.x, wallThickness, containerSize.z);
             const floor = new THREE.Mesh(floorGeo, containerMat);
             floor.position.y = 0;
@@ -239,8 +244,11 @@
             ceiling.position.y = containerSize.y;
             group.add(ceiling);
 
+            // Add a default dim light to every container to avoid total darkness
+            const defaultLight = new THREE.PointLight(0x333344, 5, 10);
+            defaultLight.position.set(0, containerSize.y - 1, 0);
+            group.add(defaultLight);
 
-            // Add themed content if it exists
             if (node.theme) {
                 const themedContent = node.theme(containerSize.x, containerSize.y, containerSize.z);
                 group.add(themedContent);
@@ -258,6 +266,9 @@
             counter.position.set(0, 0.6, -d / 2 + 1);
             group.add(counter);
 
+            loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(-1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
             const light = new THREE.PointLight(0xffa500, 50, 8);
             light.position.set(0, h - 1, 0);
             group.add(light);
@@ -266,24 +277,15 @@
 
         function createLivingQuarters(w, h, d) {
             const group = new THREE.Group();
-            const loader = new GLTFLoader();
-            loader.load(
-                'https://storage.googleapis.com/sp-ar-assets/couch-b883389a-2830-449e-824b-653716631835/couch.glb',
-                (gltf) => {
-                    const model = gltf.scene;
-                    model.scale.set(1.2, 1.2, 1.2);
-                    model.position.set(-w / 2 + 2, 0.2, 0);
-                    model.rotation.y = Math.PI / 2;
-                    group.add(model);
-                },
-                undefined,
-                (error) => {
-                    console.error('Failed to load couch model', error);
-                    const fallbackBed = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, d * 0.6), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
-                    fallbackBed.position.set(-w / 2 + 1, 0.4, 0);
-                    group.add(fallbackBed);
-                }
-            );
+
+            loadAsset(group, 'assets/cyberpunk/sofa_couch.glb', new THREE.Vector3(-w / 2 + 2, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/tableCoffee.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/televisionModern.glb', new THREE.Vector3(w / 2 - 1, 0.8, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+
+            const light = new THREE.PointLight(0xeeeeff, 25, 12);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
+
             return group;
         }
 
@@ -324,13 +326,10 @@
 
         function createLookout(w, h, d) {
             const group = new THREE.Group();
-            // This container is mostly empty to provide a view.
-            // We can add a simple railing.
-            const railGeo = new THREE.BoxGeometry(w, 0.1, 0.1);
-            const railMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-            const rail = new THREE.Mesh(railGeo, railMat);
-            rail.position.set(0, 1, -d / 2 + 0.5);
-            group.add(rail);
+            loadAsset(group, 'assets/urban/detail-barrier-strong-type-a.glb', new THREE.Vector3(0, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            const light = new THREE.PointLight(0x6677aa, 20, 15);
+            light.position.set(0, h - 1, 0);
+            group.add(light);
             return group;
         }
 
@@ -347,7 +346,6 @@
                 return;
             }
 
-            // Update UI
             titleEl.innerText = targetNode.title;
             descEl.innerText = targetNode.desc;
             nextBtn.disabled = true;
@@ -358,31 +356,20 @@
                 targetNode.pos.z + containerSize.z * 0.4
             );
 
-            // Determine a smart look-at target
-            const nextNodeDir = Object.keys(targetNode.connections).find(key => targetNode.connections[key] !== null);
             let lookAtPos;
-            if (nextNodeDir) {
-                const nextNode = cityLayout.find(n => n.id === targetNode.connections[nextNodeDir]);
+            const primaryDirection = targetNode.connections.north ?? targetNode.connections.east ?? targetNode.connections.south ?? targetNode.connections.west ?? null;
+            if (primaryDirection !== null) {
+                const nextNode = cityLayout.find(n => n.id === primaryDirection);
                 if (nextNode) {
-                    lookAtPos = new THREE.Vector3(
-                        nextNode.pos.x,
-                        nextNode.pos.y + humanHeight,
-                        nextNode.pos.z
-                    );
+                    lookAtPos = new THREE.Vector3(nextNode.pos.x, nextNode.pos.y + humanHeight, nextNode.pos.z);
                 }
             }
-            // Fallback look-at
+
             if (!lookAtPos) {
                 lookAtPos = new THREE.Vector3(targetNode.pos.x, targetNode.pos.y + humanHeight, targetNode.pos.z - 5);
             }
 
-
-            gsap.to(camera.position, {
-                ...cameraPos,
-                duration: 1.5,
-                ease: 'power2.inOut'
-            });
-
+            gsap.to(camera.position, { ...cameraPos, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(lookAtTarget, {
                 ...lookAtPos,
                 duration: 1.5,
@@ -401,35 +388,28 @@
             const currentNode = cityLayout.find(n => n.id === currentNodeIndex);
             let nextNodeId = null;
 
-            switch (event.key) {
-                case 'ArrowUp':
-                case 'w':
+            switch (event.key.toLowerCase()) {
+                case 'arrowup': case 'w':
                     nextNodeId = currentNode.connections.north;
                     break;
-                case 'ArrowDown':
-                case 's':
+                case 'arrowdown': case 's':
                     nextNodeId = currentNode.connections.south;
                     break;
-                case 'ArrowLeft':
+                case 'arrowleft':
                     nextNodeId = currentNode.connections.west;
                     break;
-                case 'ArrowRight':
+                case 'arrowright':
                     nextNodeId = currentNode.connections.east;
                     break;
-                // You could add Q/E for up/down if you prefer
-                // case 'q': nextNodeId = currentNode.connections.down; break;
-                // case 'e': nextNodeId = currentNode.connections.up; break;
+                case 'q':
+                    nextNodeId = currentNode.connections.down;
+                    break;
+                case 'e':
+                    nextNodeId = currentNode.connections.up;
+                    break;
             }
 
-            // Special handling for up/down on specific nodes for clarity
-            if (currentNode.id === 1 && event.key === 'ArrowUp') nextNodeId = currentNode.connections.up;
-            if (currentNode.id === 3 && event.key === 'ArrowDown') nextNodeId = currentNode.connections.down;
-            if (currentNode.id === 3 && event.key === 'w') nextNodeId = currentNode.connections.north;
-            if (currentNode.id === 4 && event.key === 'ArrowUp') nextNodeId = currentNode.connections.up;
-            if (currentNode.id === 5 && event.key === 'ArrowDown') nextNodeId = currentNode.connections.down;
-
-
-            if (nextNodeId !== null) {
+            if (nextNodeId !== undefined && nextNodeId !== null) {
                 navigateToNode(nextNodeId);
             }
         }
@@ -470,7 +450,7 @@
 
         buildWorld();
         navigateToNode(0);
-        autoModeCheckbox.checked = false; // Start in manual mode
+        autoModeCheckbox.checked = false;
         nextBtn.disabled = true;
         nextBtn.style.opacity = '0.5';
         renderer.setSize(window.innerWidth, window.innerHeight);
