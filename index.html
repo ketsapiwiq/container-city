@@ -159,7 +159,7 @@
         camera.position.set(0, 2, 10);
         camera.lookAt(lookAtTarget);
 
-        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5); // Slightly boosted ambient
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
         directionalLight.position.set(10, 20, 15);
@@ -275,10 +275,6 @@
                 ceiling.position.y = containerSize.y;
                 group.add(ceiling);
             }
-            // Add a default dim light to every container to avoid total darkness
-            const defaultLight = new THREE.PointLight(0x333344, 5, 10);
-            defaultLight.position.set(0, containerSize.y - 1, 0);
-            group.add(defaultLight);
             if (node.theme) {
                 const themedContent = node.theme(containerSize.x, containerSize.y, containerSize.z);
                 group.add(themedContent);
@@ -298,8 +294,14 @@
             loadAsset(group, 'assets/furnitures/stoolBar.glb', new THREE.Vector3(1.5, 0, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(-1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/food/bowl-broth.glb', new THREE.Vector3(1.5, 1.2, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0xffa500, 50, 8);
-            light.position.set(0, h - 1, 0);
+            // clutter
+            loadAsset(group, 'assets/food/steamer.glb', new THREE.Vector3(-0.5, 1.2, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/pan.glb', new THREE.Vector3(0.5, 1.2, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/soy.glb', new THREE.Vector3(2, 1.2, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/chinese.glb', new THREE.Vector3(w / 2 - 1, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -0.5, 0));
+
+            const light = new THREE.PointLight(0xffa500, 100, 20, 2);
+            light.position.set(0, h - 1.5, 0);
             group.add(light);
             return group;
         }
@@ -310,7 +312,13 @@
             loadAsset(group, 'assets/furnitures/tableCoffee.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/televisionModern.glb', new THREE.Vector3(w / 2 - 1, 0.8, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0xeeeeff, 25, 12);
+            // clutter
+            loadAsset(group, 'assets/furnitures/rugDoormat.glb', new THREE.Vector3(0, 0.01, d / 2 - 1), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/laptop.glb', new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 1.2, 0));
+            loadAsset(group, 'assets/food/soda-can.glb', new THREE.Vector3(0.5, 0.5, 0.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/coatRackStanding.glb', new THREE.Vector3(w / 2 - 1, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xeeeeff, 80, 20, 2);
             light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
@@ -318,57 +326,77 @@
 
         function createCafe(w, h, d) {
             const group = new THREE.Group();
-            loadAsset(group, 'assets/furnitures/tableRound.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(0, 0, -2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(0, 0, 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
-            loadAsset(group, 'assets/food/cup-coffee.glb', new THREE.Vector3(0, 0.7, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0xffddaa, 30, 10);
-            light.position.set(0, h - 1, 0);
+            loadAsset(group, 'assets/furnitures/tableRound.glb', new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(1.2, 0, -1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -1.2, 0));
+            loadAsset(group, 'assets/furnitures/chair.glb', new THREE.Vector3(-1.2, 0, -1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 1.2, 0));
+            loadAsset(group, 'assets/food/cup-coffee.glb', new THREE.Vector3(-0.2, 0.7, -1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0));
+            loadAsset(group, 'assets/food/cake.glb', new THREE.Vector3(0, 0.75, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/arcade/cash-register.glb', new THREE.Vector3(2, 0.75, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            const counterGeo = new THREE.BoxGeometry(w - 2, 0.7, 1); const counterMat = new THREE.MeshStandardMaterial({ color: 0x503010 });
+            const counter = new THREE.Mesh(counterGeo, counterMat); counter.position.set(0, 0.35, -d / 2 + 1); group.add(counter);
+
+            const light = new THREE.PointLight(0xffddaa, 90, 20, 2);
+            light.position.set(0, h - 1, -d / 2 + 1);
             group.add(light);
             return group;
         }
 
         function createArcade(w, h, d) {
             const group = new THREE.Group();
-            loadAsset(group, 'assets/arcade/pinball.glb', new THREE.Vector3(-w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/arcade/arcade-machine.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/arcade/claw-machine.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
-            const light1 = new THREE.PointLight(0x00ffff, 40, 10);
-            light1.position.set(-w / 4, h / 2, -d / 2 + 2); group.add(light1);
-            const light2 = new THREE.PointLight(0xff00ff, 40, 10);
-            light2.position.set(w / 4, h / 2, -d / 2 + 2); group.add(light2);
+            loadAsset(group, 'assets/arcade/pinball.glb', new THREE.Vector3(-w / 4 - 1, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.2, 0));
+            loadAsset(group, 'assets/arcade/arcade-machine.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -0.2, 0));
+            loadAsset(group, 'assets/arcade/claw-machine.glb', new THREE.Vector3(w / 2 - 1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            // clutter
+            loadAsset(group, 'assets/arcade/dance-machine.glb', new THREE.Vector3(-w / 2 + 2, 0, 0), new THREE.Vector3(1.2, 1.2, 1.2), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/arcade/vending-machine.glb', new THREE.Vector3(w / 2 - 1.5, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/urban/trashcan.glb', new THREE.Vector3(0, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light1 = new THREE.PointLight(0x00ffff, 100, 20, 2); light1.position.set(-w / 4, h / 2, 0); group.add(light1);
+            const light2 = new THREE.PointLight(0xff00ff, 100, 20, 2); light2.position.set(w / 4, h / 2, 0); group.add(light2);
             return group;
         }
 
         function createHydroponics(w, h, d) {
             const group = new THREE.Group();
             for (let i = 0; i < 4; i++) {
-                loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(0, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+                loadAsset(group, 'assets/furnitures/pottedPlant.glb', new THREE.Vector3(w / 4, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.random() * Math.PI, 0));
+                loadAsset(group, 'assets/furnitures/plantSmall2.glb', new THREE.Vector3(-w / 4, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.random() * Math.PI, 0));
             }
-            const light = new THREE.PointLight(0xff00ff, 80, 12);
-            light.position.set(0, h - 0.5, 0);
+            // clutter
+            loadAsset(group, 'assets/urban/barrel.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/planks.glb', new THREE.Vector3(0, 0.1, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0));
+            loadAsset(group, 'assets/urban/detail-cables-type-b.glb', new THREE.Vector3(0, h - 0.2, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xff00ff, 150, 20, 2);
+            light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
         }
 
         function createStorage(w, h, d) {
             const group = new THREE.Group();
+            for (let i = 0; i < 5; i++) {
+                loadAsset(group, 'assets/furnitures/cardboardBoxClosed.glb', new THREE.Vector3((Math.random() - 0.5) * (w - 2), 0.1 + Math.random() * 1.5, (Math.random() - 0.5) * (d - 2)), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.random() * Math.PI, 0));
+            }
             loadAsset(group, 'assets/urban/pallet.glb', new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(-1.5, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/furnitures/cardboardBoxClosed.glb', new THREE.Vector3(1.5, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/urban/trashcan.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0xaaaaaa, 20, 15);
+            loadAsset(group, 'assets/furnitures/televisionVintage.glb', new THREE.Vector3(1.5, 0, -2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.3, 0.1));
+            loadAsset(group, 'assets/urban/barrel.glb', new THREE.Vector3(w / 2 - 1.5, 0, d / 2 - 1.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xaaaaaa, 60, 25, 2);
             light.position.set(0, h - 1, 0); group.add(light);
             return group;
         }
 
-        function createLookout(w, h, d) {
+        function createLookout(w, h, d) { // Sparsely populated by design
             const group = new THREE.Group();
-            loadAsset(group, 'assets/urban/detail-barrier-strong-type-a.glb', new THREE.Vector3(0, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/urban/detail-bench.glb', new THREE.Vector3(w / 2 - 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/urban/detail-barrier-strong-type-a.glb', new THREE.Vector3(0, 0, -d / 2 + 0.1), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/urban/detail-bench.glb', new THREE.Vector3(w / 2 - 2, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
             loadAsset(group, 'assets/urban/detail-light-single.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
-            const light = new THREE.PointLight(0x6677aa, 20, 15);
-            light.position.set(0, h - 1, 0); group.add(light);
+            loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(w / 2 - 2, 0.5, 0.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0x6677aa, 80, 20, 2);
+            light.position.set(-w / 2 + 1, h - 1, 0); group.add(light);
             return group;
         }
 
@@ -380,8 +408,11 @@
             loadAsset(group, 'assets/furnitures/lampRoundTable.glb', new THREE.Vector3(w / 2 - 1.5, 0.5, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/rugRound.glb', new THREE.Vector3(0, 0.01, 0), new THREE.Vector3(2, 1, 2), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/bookcaseOpen.glb', new THREE.Vector3(-w / 2 + 0.5, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
-            const light = new THREE.PointLight(0xffeedd, 35, 10);
-            light.position.set(w / 2 - 1.5, 2, 1);
+            loadAsset(group, 'assets/furnitures/books.glb', new THREE.Vector3(-w / 2 + 0.5, 0.1, 0.3), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/furnitures/chairDesk.glb', new THREE.Vector3(-1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0))
+
+            const light = new THREE.PointLight(0xffeedd, 90, 20, 2);
+            light.position.set(w / 2 - 1.5, 2.5, 1);
             group.add(light);
             return group;
         }
@@ -389,10 +420,14 @@
         function createBathroom(w, h, d) {
             const group = new THREE.Group();
             loadAsset(group, 'assets/furnitures/toiletSquare.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/furnitures/showerRound.glb', new THREE.Vector3(w / 2 - 1.5, 0, -d / 2 + 1.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            loadAsset(group, 'assets/furnitures/bathroomSink.glb', new THREE.Vector3(-w / 2 + 1, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
-            loadAsset(group, 'assets/furnitures/bathroomMirror.glb', new THREE.Vector3(-w / 2 + 0.15, 1.5, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0xddddff, 40, 12);
+            loadAsset(group, 'assets/furnitures/shower.glb', new THREE.Vector3(w / 2 - 1.5, 0, -d / 2 + 1.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/furnitures/bathroomSink.glb', new THREE.Vector3(-w / 2 + 1, 0, d / 2 - 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/furnitures/bathroomMirror.glb', new THREE.Vector3(-w / 2 + 0.15, 1.5, d / 2 - 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            //clutter
+            loadAsset(group, 'assets/urban/trashcan.glb', new THREE.Vector3(0, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(0.1, 0.8, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, Math.PI / 2));
+
+            const light = new THREE.PointLight(0xddddff, 120, 20, 2);
             light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
@@ -404,9 +439,15 @@
             loadAsset(group, 'assets/furnitures/kitchenCabinet.glb', new THREE.Vector3(w / 2 - 2.5, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
             loadAsset(group, 'assets/furnitures/kitchenStove.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/table.glb', new THREE.Vector3(0, 0, 1), new THREE.Vector3(1.5, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            // clutter
             loadAsset(group, 'assets/food/cutting-board.glb', new THREE.Vector3(0, 0.75, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/food/carrot.glb', new THREE.Vector3(-0.2, 0.8, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0.2, 0.5, 0));
-            const light = new THREE.PointLight(0xffffff, 40, 15);
+            loadAsset(group, 'assets/food/onion.glb', new THREE.Vector3(0.1, 0.8, 0.9), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+            loadAsset(group, 'assets/food/frying-pan.glb', new THREE.Vector3(-w / 2 + 1, 0.9, -0.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/food/pot-stew.glb', new THREE.Vector3(-w / 2 + 1, 0.9, 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/food/bottle-oil.glb', new THREE.Vector3(w / 2 - 3, 0.9, -d / 2 + 1.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xffffff, 100, 25, 2);
             light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
@@ -417,11 +458,17 @@
             loadAsset(group, 'assets/furnitures/deskCorner.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/furnitures/computerScreen.glb', new THREE.Vector3(-w / 2 + 1, 1, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.3, 0));
             loadAsset(group, 'assets/furnitures/computerScreen.glb', new THREE.Vector3(-w / 2 + 2.2, 1, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -0.3, 0));
+            loadAsset(group, 'assets/furnitures/computerScreen.glb', new THREE.Vector3(-w / 2 + 1, 1, -d / 2 + 2.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2 - 0.3, 0));
             loadAsset(group, 'assets/furnitures/chairDesk.glb', new THREE.Vector3(-w / 2 + 2.5, 0, -d / 2 + 2.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 2.5, 0));
+            // clutter
             loadAsset(group, 'assets/food/pizza-box.glb', new THREE.Vector3(w / 2 - 1, 0.01, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 1, 0.1));
-            loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(w / 2 - 1.5, 0.01, d / 2 - 1.2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0));
-            const screenLight1 = new THREE.PointLight(0x00ffaa, 20, 5);
-            screenLight1.position.set(-w / 2 + 1, 1.2, -d / 2 + 1.5);
+            loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(w / 2 - 1.5, 0.01, d / 2 - 1.2 + (Math.random() - 0.5)), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0));
+            loadAsset(group, 'assets/food/soda-can.glb', new THREE.Vector3(w / 2 - 1.5, 0.01, d / 2 - 1.2 + (Math.random() - 0.5)), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.5, 0));
+            loadAsset(group, 'assets/urban/detail-cables-type-a.glb', new THREE.Vector3(-w / 2 + 1, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/urban/detail-cables-type-b.glb', new THREE.Vector3(0, h - 0.2, 0), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0.5, 0));
+
+            const screenLight1 = new THREE.PointLight(0x00ffaa, 80, 20, 2);
+            screenLight1.position.set(-w / 2 + 1.5, 1.2, -d / 2 + 1.5);
             group.add(screenLight1);
             return group;
         }
@@ -431,8 +478,12 @@
             loadAsset(group, 'assets/furnitures/washerDryerStacked.glb', new THREE.Vector3(-w / 2 + 1, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/washerDryerStacked.glb', new THREE.Vector3(-w / 2 + 1, 0, 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
             loadAsset(group, 'assets/furnitures/bench.glb', new THREE.Vector3(w / 2 - 2, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
-            const light = new THREE.PointLight(0xccffee, 30, 15);
-            light.position.set(0, h - 0.5, 0);
+            // clutter
+            loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(w / 2 - 2, 0.5, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.2, 0));
+            loadAsset(group, 'assets/urban/detail-barrier-type-b.glb', new THREE.Vector3(0, 0, d / 2 - 0.5), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xccffee, 100, 25, 2);
+            light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
         }
@@ -442,17 +493,24 @@
             loadAsset(group, 'assets/furnitures/desk.glb', new THREE.Vector3(-w / 2 + 2, 0, -d / 2 + 1), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/urban/planks.glb', new THREE.Vector3(w / 4, 0.15, d / 4), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
             loadAsset(group, 'assets/urban/barrel.glb', new THREE.Vector3(-w / 2 + 1, 0, d / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0xffff99, 40, 12, 2);
-            light.position.set(0, h - 0.5, 0);
+            // clutter
+            loadAsset(group, 'assets/furnitures/toaster.glb', new THREE.Vector3(-w / 2 + 1, 0.9, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.2, 0));
+            loadAsset(group, 'assets/furnitures/radio.glb', new THREE.Vector3(0, 0, w / 2 - 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI, 0));
+            loadAsset(group, 'assets/urban/detail-bricks-type-a.glb', new THREE.Vector3(w / 2 - 1, 0, -d / 2 + 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
+
+            const light = new THREE.PointLight(0xffff99, 120, 20, 2);
+            light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
         }
 
         function createEmptyContainer(w, h, d) {
             const group = new THREE.Group();
-            loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(1, 0, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0.2));
+            loadAsset(group, 'assets/furnitures/cardboardBoxOpen.glb', new THREE.Vector3(1, 0, 1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0.2, 0, 0.2));
             loadAsset(group, 'assets/food/soda-can-crushed.glb', new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0, 0));
-            const light = new THREE.PointLight(0x555566, 15, 15);
+            loadAsset(group, 'assets/food/plate-broken.glb', new THREE.Vector3(-1, 0.01, -1), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, 0.8, 0));
+
+            const light = new THREE.PointLight(0x555566, 70, 25, 2);
             light.position.set(0, h - 1, 0);
             group.add(light);
             return group;
@@ -464,7 +522,13 @@
                 loadAsset(group, 'assets/furnitures/bookcaseClosedWide.glb', new THREE.Vector3(-w / 2 + 1, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
                 loadAsset(group, 'assets/furnitures/bookcaseClosedWide.glb', new THREE.Vector3(w / 2 - 1, 0, -d / 2 + 1 + i * 2), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
             }
-            const light = new THREE.PointLight(0x00aaff, 60, 10);
+            // Clutter
+            loadAsset(group, 'assets/urban/detail-cables-type-a.glb', new THREE.Vector3(-w / 2 + 1, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, Math.PI / 2, 0));
+            loadAsset(group, 'assets/urban/detail-cables-type-a.glb', new THREE.Vector3(w / 2 - 1, 0.1, 0), new THREE.Vector3(1, 1, 1), new THREE.Vector3(0, -Math.PI / 2, 0));
+            loadAsset(group, 'assets/urban/detail-cables-type-b.glb', new THREE.Vector3(0, 0.1, 0), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0.5, 0));
+            loadAsset(group, 'assets/urban/detail-cables-type-b.glb', new THREE.Vector3(0, h - 0.2, 0), new THREE.Vector3(2, 1, 1), new THREE.Vector3(0, 0.5, 0));
+
+            const light = new THREE.PointLight(0x00aaff, 180, 20, 2);
             light.position.set(0, h / 2, 0);
             group.add(light);
             return group;
@@ -605,7 +669,11 @@
 
         nextBtn.addEventListener('click', () => {
             if (isAutoMode && !isAnimating) {
-                let nextIndex = (currentNodeIndex + 1) % cityLayout.length;
+                // Find next valid node sequentially
+                let nextIndex = currentNodeIndex;
+                do {
+                    nextIndex = (nextIndex + 1) % cityLayout.length;
+                } while (!cityLayout.find(n => n.id === nextIndex));
                 navigateToNode(nextIndex);
             }
         });
