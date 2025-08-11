@@ -1,0 +1,12 @@
+{
+  "name": "container-city",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/ketsapiwiq/container-city.git",
+  "author": "Hadrien <ketsapiwiq@protonmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "gsap": "3.12.5",
+    "three": "0.167.0"
+  }
+}
