@@ -57,46 +57,64 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true; // Provides a smooth, inertial feel
 
-        // --- 2. Load and Store Your Models ---
-        const loader = new GLTFLoader();
-        const models = [];
 
-        // Define your models with their paths and initial properties
-        const modelData = [
-            // Model 1: A simple container box
-            { path: 'assets/cyberpunk/sofa_couch.glb', name: 'Box', position: { x: -2, y: 0, z: 0 } },
+// --- 2. Load and Store Your Models ---
+const loader = new GLTFLoader();
+const models = [];
+const newMaterial = new THREE.MeshStandardMaterial({ color: 0xfff });
 
-            // Model 2: A more complex model
-            { path: 'assets/cyberpunk2078/interactive/accessories/int_accessories_001__cellphone/int_accessories_001__cellphone.glb', name: 'Container', position: { x: 2, y: 0, z: 0 } },
+// Fetch the list of model paths from glbs.txt
+fetch('glbs.txt')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(text => {
+        const paths = text.split('\n').filter(path => path.trim() !== '');
+        loadModels(paths);
+    })
+    .catch(error => {
+        console.error('Error fetching glbs.txt:', error);
+    });
 
-            // Model 3: Another model, for demonstration
-            { path: 'assets/cyberpunk/int_accessories_001__johnnysguitar.glb', name: 'Crate', position: { x: 0, y: 0, z: 0 } }
-        ];
+// A function to load and position all models
+function loadModels(paths) {
+    // Generate a new random seed for consistent positioning on each load
+    const random = new THREE.Vector3();
+    const radius = 100; // Radius for the circular distribution
 
-        // A simple, blue material
-        const newMaterial = new THREE.MeshStandardMaterial({ color: 0xfff });
+    paths.forEach((path, index) => {
+        // Generate a random position for each model
+        const angle = (index / paths.length) * Math.PI * 2; // Distribute on a circle
+        const x = Math.cos(angle) * (radius + Math.random() * 50);
+        const y = Math.cos(angle) * (radius + Math.random() * 50);
+        const z = Math.sin(angle) * (radius + Math.random() * 50);
+        const position = new THREE.Vector3(x, y, z);
 
-        // Loop through the data and load each model
-        modelData.forEach(data => {
-            loader.load(data.path, (gltf) => {
-                const model = gltf.scene;
-                model.position.set(data.position.x, data.position.y, data.position.z);
+        loader.load(path, (gltf) => {
+            const model = gltf.scene;
+            model.position.copy(position);
 
-                // Traverse the model's children and apply the new material
-                model.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material = newMaterial;
-                    }
-                });
-
-                scene.add(model);
-                models.push(model); // Store it for manipulation
-                console.log(`Loaded model: ${data.name}`);
-            }, undefined, (error) => {
-                console.error(`Error loading model from ${data.path}`, error);
+            // Traverse the model's children and apply the new material
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    // child.material = newMaterial;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
             });
-        });
 
+            scene.add(model);
+            models.push(model);
+            console.log(`Loaded model: ${path}`);
+        }, undefined, (error) => {
+            console.error(`Error loading model from ${path}`, error);
+        });
+    });
+}   
+       
         // --- 3. Animation and Manipulation Loop ---
         function animate() {
             requestAnimationFrame(animate);
