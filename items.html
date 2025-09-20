@@ -52,96 +52,85 @@
         // Optional: Add camera controls for debugging
         // const controls = new OrbitControls(camera, renderer.domElement);
         // controls.enableDamping = true;
+// --- 2. Load and Store Your Models ---
+const loader = new GLTFLoader();
+const allPaths = [];
+const currentModels = [];
+const displayGroupSize = 10; // Change this to 1 for showing one model at a time
+let modelIndex = 0;
+let lastUpdateTime = 0;
+const slideInterval = 5000; // 5 seconds between slides
 
-        // --- 2. Load and Store Your Models ---
-        const loader = new GLTFLoader();
-        const models = [];
-        const textureLoader = new THREE.TextureLoader();
+// A function to load and position models for the current window
+function loadNextGroup() {
+    // Clear the scene of old models
+    currentModels.forEach(model => scene.remove(model));
+    currentModels.length = 0;
 
-        // Fetch the list of model paths from glbs.txt
-        fetch('glbs.txt')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(text => {
-                const paths = text.split('\n').filter(path => path.trim() !== '');
-                loadModels(paths);
-            })
-            .catch(error => {
-                console.error('Error fetching glbs.txt:', error);
-            });
+    for (let i = 0; i < displayGroupSize; i++) {
+        const pathIndex = (modelIndex + i) % allPaths.length;
+        const path = allPaths[pathIndex];
 
-        // A function to load and position a random subset of models
-        function loadModels(paths) {
-            const numModelsToLoad = 10;
-            const shuffledPaths = paths.sort(() => 0.5 - Math.random());
-            const selectedPaths = shuffledPaths.slice(0, numModelsToLoad);
-
-            selectedPaths.forEach((path) => {
-                // Generate a random position for each model within a small area
-                const x = (Math.random() - 0.5) * 5;
+        // Position models in a line for the sliding effect
+    //    const position = new THREE.Vector3((i - (displayGroupSize - 1) / 2) * 5, 0, 0);
+    const x = (Math.random() - 0.5) * 5;
                 const y = (Math.random() - 0.5) * 2;
                 const z = (Math.random() - 0.5) * 5;
                 const position = new THREE.Vector3(x, y, z);
+        loader.load(path, (gltf) => {
+            const model = gltf.scene;
+            model.position.copy(position);
 
-                loader.load(path, (gltf) => {
-                    const model = gltf.scene;
-                    model.position.copy(position);
-
-                    // Apply a random texture to a new material
-                    // const randomTextureIndex = Math.floor(Math.random() * 5) + 1; // Assuming you have texture1.jpg to texture5.jpg
-                    const newMaterial = new THREE.MeshStandardMaterial({
-                        color: 0xfff
-                    //    map: textureLoader.load(`assets/textures/texture${randomTextureIndex}.jpg`)
-                    });
-
-                    model.traverse((child) => {
-                        if (child.isMesh) {
-                            child.material = newMaterial;
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-
-                    scene.add(model);
-                    models.push(model);
-                    console.log(`Loaded model: ${path}`);
-                }, undefined, (error) => {
-                    console.error(`Error loading model from ${path}`, error);
-                });
+            // Apply a material to avoid black meshes
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff * 0.7 });
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
             });
-        }
 
-        // --- 3. Animation and Manipulation Loop ---
-        let angle = 0; // A variable to track the camera's orbit angle
-        const orbitRadius = 7; // Distance of the camera from the center
-        const orbitSpeed = 0.01; // How fast the camera moves
+            scene.add(model);
+            currentModels.push(model);
+        });
+    }
 
-        function animate() {
-            requestAnimationFrame(animate);
+    modelIndex = (modelIndex + displayGroupSize) % allPaths.length;
+}
 
-            // Update the camera's position for a quick orbit
-            angle += orbitSpeed;
-            camera.position.x = Math.sin(angle) * orbitRadius;
-            camera.position.y = Math.sin(angle * 0.5) * 1; // Add a slight vertical bobbing
-            camera.position.z = Math.cos(angle) * orbitRadius;
-            camera.lookAt(0, 0, 0); // Keep the camera focused on the center of the models
+// --- 3. Animation and Manipulation Loop ---
+function animate(time) {
+    requestAnimationFrame(animate);
 
-            // If you want the models to spin as well
-            if (models.length > 0) {
-                models.forEach(model => {
-                    model.rotation.y += 0.005;
-                });
-            }
+    // Check if it's time to load the next group
+    if (time - lastUpdateTime > slideInterval && allPaths.length > 0) {
+        loadNextGroup();
+        lastUpdateTime = time;
+    }
+    
+    // Animate the camera orbit
+    const orbitSpeed = 0.001; // Slower orbit speed
+    const orbitRadius = 1;
+    camera.position.x = Math.sin(time * orbitSpeed) * orbitRadius;
+    camera.position.z = Math.cos(time * orbitSpeed) * orbitRadius;
+    camera.lookAt(0, 0, 0);
+    
+    // Rotate the models
+    currentModels.forEach(model => {model.rotation.y += 0.001; model.rotation.x += 0.001; model.rotation.z += 0.001});
 
-            // Uncomment this line if you re-enable OrbitControls
-            // controls.update(); 
-            renderer.render(scene, camera);
-        }
+    renderer.render(scene, camera);
+}
 
+// Start by fetching the paths and initializing the first group
+fetch('glbs.txt')
+    .then(response => response.text())
+    .then(text => {
+        const paths = text.split('\n').filter(path => path.trim() !== '');
+        allPaths.push(...paths);
+        loadNextGroup(); // Load the first group immediately
+        animate(0);
+    })
+    .catch(error => console.error('Error fetching glbs.txt:', error));
         animate();
 
         // --- 4. Handle Window Resize ---
