@@ -41,98 +41,104 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Position the camera
-        camera.position.set(0, 2, 5);
-
         // Add lighting
-       // const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1.5); // Sky color, ground color, intensity
-        // scene.add(hemisphereLight);
         const ambientLight = new THREE.AmbientLight(0x404040, 2);
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
         directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
         scene.add(directionalLight);
 
-        // Add camera controls
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; // Provides a smooth, inertial feel
+        // Optional: Add camera controls for debugging
+        // const controls = new OrbitControls(camera, renderer.domElement);
+        // controls.enableDamping = true;
 
+        // --- 2. Load and Store Your Models ---
+        const loader = new GLTFLoader();
+        const models = [];
+        const textureLoader = new THREE.TextureLoader();
 
-// --- 2. Load and Store Your Models ---
-const loader = new GLTFLoader();
-const models = [];
-const newMaterial = new THREE.MeshStandardMaterial({ color: 0xfff });
-
-// Fetch the list of model paths from glbs.txt
-fetch('glbs.txt')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.text();
-    })
-    .then(text => {
-        const paths = text.split('\n').filter(path => path.trim() !== '');
-        loadModels(paths);
-    })
-    .catch(error => {
-        console.error('Error fetching glbs.txt:', error);
-    });
-
-// A function to load and position all models
-function loadModels(paths) {
-    // Generate a new random seed for consistent positioning on each load
-    const random = new THREE.Vector3();
-    const radius = 100; // Radius for the circular distribution
-
-    paths.forEach((path, index) => {
-        // Generate a random position for each model
-        const angle = (index / paths.length) * Math.PI * 2; // Distribute on a circle
-        const x = Math.cos(angle) * (radius + Math.random() * 50);
-        const y = Math.cos(angle) * (radius + Math.random() * 50);
-        const z = Math.sin(angle) * (radius + Math.random() * 50);
-        const position = new THREE.Vector3(x, y, z);
-
-        loader.load(path, (gltf) => {
-            const model = gltf.scene;
-            model.position.copy(position);
-
-            // Traverse the model's children and apply the new material
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    // child.material = newMaterial;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
+        // Fetch the list of model paths from glbs.txt
+        fetch('glbs.txt')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                return response.text();
+            })
+            .then(text => {
+                const paths = text.split('\n').filter(path => path.trim() !== '');
+                loadModels(paths);
+            })
+            .catch(error => {
+                console.error('Error fetching glbs.txt:', error);
             });
 
-            scene.add(model);
-            models.push(model);
-            console.log(`Loaded model: ${path}`);
-        }, undefined, (error) => {
-            console.error(`Error loading model from ${path}`, error);
-        });
-    });
-}   
-       
+        // A function to load and position a random subset of models
+        function loadModels(paths) {
+            const numModelsToLoad = 10;
+            const shuffledPaths = paths.sort(() => 0.5 - Math.random());
+            const selectedPaths = shuffledPaths.slice(0, numModelsToLoad);
+
+            selectedPaths.forEach((path) => {
+                // Generate a random position for each model within a small area
+                const x = (Math.random() - 0.5) * 5;
+                const y = (Math.random() - 0.5) * 2;
+                const z = (Math.random() - 0.5) * 5;
+                const position = new THREE.Vector3(x, y, z);
+
+                loader.load(path, (gltf) => {
+                    const model = gltf.scene;
+                    model.position.copy(position);
+
+                    // Apply a random texture to a new material
+                    // const randomTextureIndex = Math.floor(Math.random() * 5) + 1; // Assuming you have texture1.jpg to texture5.jpg
+                    const newMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xfff
+                    //    map: textureLoader.load(`assets/textures/texture${randomTextureIndex}.jpg`)
+                    });
+
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material = newMaterial;
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+
+                    scene.add(model);
+                    models.push(model);
+                    console.log(`Loaded model: ${path}`);
+                }, undefined, (error) => {
+                    console.error(`Error loading model from ${path}`, error);
+                });
+            });
+        }
+
         // --- 3. Animation and Manipulation Loop ---
+        let angle = 0; // A variable to track the camera's orbit angle
+        const orbitRadius = 7; // Distance of the camera from the center
+        const orbitSpeed = 0.01; // How fast the camera moves
+
         function animate() {
             requestAnimationFrame(animate);
 
-            // This is the "livecoding" part!
-            // Manipulate your models here. 
-            // The 'models' array contains the loaded objects.
+            // Update the camera's position for a quick orbit
+            angle += orbitSpeed;
+            camera.position.x = Math.sin(angle) * orbitRadius;
+            camera.position.y = Math.sin(angle * 0.5) * 1; // Add a slight vertical bobbing
+            camera.position.z = Math.cos(angle) * orbitRadius;
+            camera.lookAt(0, 0, 0); // Keep the camera focused on the center of the models
 
+            // If you want the models to spin as well
             if (models.length > 0) {
-                // Example: Rotate all loaded models
                 models.forEach(model => {
                     model.rotation.y += 0.005;
-                    // You can add other manipulations like position or scale
-                    // model.position.y = Math.sin(Date.now() * 0.001) * 0.5;
                 });
             }
 
-            controls.update(); // Required for OrbitControls damping
+            // Uncomment this line if you re-enable OrbitControls
+            // controls.update(); 
             renderer.render(scene, camera);
         }
 
