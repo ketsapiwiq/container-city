@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livecoding GLB Scene</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        // Import essential three.js components
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 1. Scene Setup ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Position the camera
+        camera.position.set(0, 2, 5);
+
+        // Add lighting
+       // const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1.5); // Sky color, ground color, intensity
+        // scene.add(hemisphereLight);
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        directionalLight.position.set(5, 10, 5);
+        scene.add(directionalLight);
+
+        // Add camera controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // Provides a smooth, inertial feel
+
+        // --- 2. Load and Store Your Models ---
+        const loader = new GLTFLoader();
+        const models = [];
+
+        // Define your models with their paths and initial properties
+        const modelData = [
+            // Model 1: A simple container box
+            { path: 'assets/cyberpunk/sofa_couch.glb', name: 'Box', position: { x: -2, y: 0, z: 0 } },
+
+            // Model 2: A more complex model
+            { path: 'assets/cyberpunk2078/interactive/accessories/int_accessories_001__cellphone/int_accessories_001__cellphone.glb', name: 'Container', position: { x: 2, y: 0, z: 0 } },
+
+            // Model 3: Another model, for demonstration
+            { path: 'assets/cyberpunk/int_accessories_001__johnnysguitar.glb', name: 'Crate', position: { x: 0, y: 0, z: 0 } }
+        ];
+
+        // A simple, blue material
+        const newMaterial = new THREE.MeshStandardMaterial({ color: 0xfff });
+
+        // Loop through the data and load each model
+        modelData.forEach(data => {
+            loader.load(data.path, (gltf) => {
+                const model = gltf.scene;
+                model.position.set(data.position.x, data.position.y, data.position.z);
+
+                // Traverse the model's children and apply the new material
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = newMaterial;
+                    }
+                });
+
+                scene.add(model);
+                models.push(model); // Store it for manipulation
+                console.log(`Loaded model: ${data.name}`);
+            }, undefined, (error) => {
+                console.error(`Error loading model from ${data.path}`, error);
+            });
+        });
+
+        // --- 3. Animation and Manipulation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // This is the "livecoding" part!
+            // Manipulate your models here. 
+            // The 'models' array contains the loaded objects.
+
+            if (models.length > 0) {
+                // Example: Rotate all loaded models
+                models.forEach(model => {
+                    model.rotation.y += 0.005;
+                    // You can add other manipulations like position or scale
+                    // model.position.y = Math.sin(Date.now() * 0.001) * 0.5;
+                });
+            }
+
+            controls.update(); // Required for OrbitControls damping
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // --- 4. Handle Window Resize ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>
