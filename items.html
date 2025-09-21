@@ -56,10 +56,10 @@
 const loader = new GLTFLoader();
 const allPaths = [];
 const currentModels = [];
-const displayGroupSize = 10; // Change this to 1 for showing one model at a time
+const displayGroupSize = 25; // Change this to 1 for showing one model at a time
 let modelIndex = 0;
 let lastUpdateTime = 0;
-const slideInterval = 5000; // 5 seconds between slides
+const slideInterval = 10000; // 5 seconds between slides
 
 // A function to load and position models for the current window
 function loadNextGroup() {
