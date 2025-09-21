@@ -19,6 +19,7 @@
 </head>
 
 <body>
+    <video id="webcamVideo" style="display:none;" autoplay playsinline></video>
     <script type="importmap">
         {
             "imports": {
@@ -33,6 +34,58 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        // Add this to your script, replacing the textureLoader setup
+        const video = document.getElementById("webcamVideo");
+
+        // Get access to the webcam
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                console.error("Error accessing the webcam: ", err);
+            });
+
+        // Create a video texture from the webcam feed
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.colorSpace = THREE.SRGBColorSpace;
+        // Define the vertex shader
+        const vertexShader = `
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+`;
+
+        // Define the fragment shader with the saturation filter
+        const fragmentShader = `
+    uniform sampler2D webcamTexture;
+    uniform float saturation;
+    varying vec2 vUv;
+    
+    void main() {
+        vec4 color = texture2D(webcamTexture, vUv);
+        
+        // Simple saturation filter
+        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+        vec3 greyscale = vec3(luma);
+        vec3 saturatedColor = mix(greyscale, color.rgb, saturation);
+        
+        gl_FragColor = vec4(saturatedColor, color.a);
+    }
+`;
+
+        // Create the shader material
+        const customShaderMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                webcamTexture: { value: videoTexture },
+                saturation: { value: 1.5 } // Set saturation level (1.0 is normal, >1.0 is more saturated)
+            },
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader
+        });
 
         // --- 1. Scene Setup ---
         const scene = new THREE.Scene();
@@ -59,7 +112,7 @@
         const displayGroupSize = 40; // Change this to 1 for showing one model at a time
         let modelIndex = 0;
         let lastUpdateTime = 0;
-        const slideInterval = 10000; // 5 seconds between slides
+        const slideInterval = 30000; // 5 seconds between slides
 
         // A function to load and position models for the current window
         function loadNextGroup() {
@@ -84,7 +137,8 @@
                     // Apply a material to avoid black meshes
                     model.traverse((child) => {
                         if (child.isMesh) {
-                            child.material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+                            //   child.material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+                            child.material = customShaderMaterial; // Apply the new shader material  
                             child.castShadow = true;
                             child.receiveShadow = true;
                         }
