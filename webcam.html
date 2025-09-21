@@ -115,7 +115,7 @@
 
         // --- 1. Scene Setup ---
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
@@ -135,7 +135,7 @@
         const loader = new GLTFLoader();
         const allPaths = [];
         const currentModels = [];
-        const displayGroupSize = 20; // Change this to 1 for showing one model at a time
+        const displayGroupSize = 25; // Change this to 1 for showing one model at a time
         let modelIndex = 0;
         let lastUpdateTime = 0;
         const slideInterval = 30000; // 5 seconds between slides
@@ -197,7 +197,7 @@
             // mapping for a more subtle effect.
             // The Math.log function helps make the response less jumpy
             // and more natural for voice or music.
-            const scaleFactor = 1 + (average / 20);
+            const scaleFactor = 1 + (average / 100);
 
             // Check if it's time to load the next group
             if (time - lastUpdateTime > slideInterval && allPaths.length > 0) {
