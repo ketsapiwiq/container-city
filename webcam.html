@@ -30,6 +30,32 @@
     </script>
 
     <script type="module">
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+                // Call the audio setup function with the stream
+                setupAudio(stream);
+            })
+            .catch(err => {
+                console.error("Error accessing the webcam or microphone: ", err);
+            });
+        // Add these variables at the top of your script, right after the three.js imports
+        let audioContext, analyser, dataArray = new Uint8Array(256); // Initialize with a buffer size
+        // Function to set up the audio processing
+        function setupAudio(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+
+            // Connect the nodes
+            source.connect(analyser);
+
+            // Set up the analyser for frequency data
+            analyser.fftSize = 32; // Smaller size for faster analysis
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+        }
         // Import essential three.js components
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -109,7 +135,7 @@
         const loader = new GLTFLoader();
         const allPaths = [];
         const currentModels = [];
-        const displayGroupSize = 40; // Change this to 1 for showing one model at a time
+        const displayGroupSize = 20; // Change this to 1 for showing one model at a time
         let modelIndex = 0;
         let lastUpdateTime = 0;
         const slideInterval = 30000; // 5 seconds between slides
@@ -156,11 +182,29 @@
         function animate(time) {
             requestAnimationFrame(animate);
 
+            // If the audio context is ready, get the frequency data
+            // This copies the current frequency data into the dataArray
+            analyser.getByteFrequencyData(dataArray);
+
+            // Find the average frequency level
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / dataArray.length;
+
+            // Map the average level to a scale factor. Use a non-linear
+            // mapping for a more subtle effect.
+            // The Math.log function helps make the response less jumpy
+            // and more natural for voice or music.
+            const scaleFactor = 1 + (average / 20);
+
             // Check if it's time to load the next group
             if (time - lastUpdateTime > slideInterval && allPaths.length > 0) {
                 loadNextGroup();
                 lastUpdateTime = time;
             }
+
 
             // Animate the camera orbit
             const orbitSpeed = 0.001; // Slower orbit speed
@@ -171,7 +215,11 @@
             camera.lookAt(0, 0, 0);
 
             // Rotate the models
-            currentModels.forEach(model => { model.rotation.y += 0.001; model.rotation.x += 0.001; model.rotation.z += 0.001 });
+            currentModels.forEach(model => {
+                model.rotation.y += 0.001; model.rotation.x += 0.001; model.rotation.z += 0.001;
+
+                model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            });
 
             renderer.render(scene, camera);
         }
